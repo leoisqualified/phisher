@@ -1,60 +1,72 @@
 from flask import Flask, request, jsonify
-import joblib
+import joblib  
+from bs4 import BeautifulSoup
+import requests
+from urllib.parse import urlparse
+import tldextract
 import pandas as pd
 import re
-import tldextract
 
-# Load the trained model
-model = joblib.load('phishing_model.pkl')
-
-# Initialize Flask app
 app = Flask(__name__)
 
-# Feature extraction function
-def extract_features(url):
+# Load the trained model
+model = joblib.load(open("phishing_model.pkl", "rb"))
+
+# String-based feature extraction function
+def extract_string_features(url):
     features = {}
-    
-    # Feature 1: URL length
-    features['urllength'] = len(url)
-    
-    # Feature 2: Number of dashes ('-')
-    features['numdash'] = url.count('-')
-    
-    # Feature 3: Number of dashes in hostname
-    extracted = tldextract.extract(url)
-    hostname = extracted.domain + '.' + extracted.suffix
-    features['numdashinhostname'] = hostname.count('-')
-    
-    # Feature 4: Number of underscores ('_')
-    features['numunderscore'] = url.count('_')
-    
-    # Feature 5: Number of tilde symbols ('~')
-    features['tildesymbol'] = url.count('~')
-    
-    # Feature 6: Number of '@' symbols
-    features['atsymbol'] = url.count('@')
-    
-    # Add more features here as needed...
-    features['https'] = 1 if url.startswith('https://') else 0
-    
+    # Implement the string feature extraction logic
+    features['UrlLength'] = len(url)
+    features['NumDots'] = url.count('.')
+    features['NumDash'] = url.count('-')
+    features['NumUnderscore'] = url.count('_')
+    features['NumNumericChars'] = sum(c.isdigit() for c in url)
+    parsed_url = urlparse(url)
+    hostname = parsed_url.hostname if parsed_url.hostname else ""
+    features['HostnameLength'] = len(hostname)
+    features['NumDashInHostname'] = hostname.count('-')
+    features['NoHttps'] = 1 if not url.startswith('https://') else 0
     return features
 
-# Define an endpoint for URL classification
-@app.route('/classify', methods=['POST'])
-def classify_url():
-    data = request.json
-    url = data.get('url', '')
+# Content-based feature extraction function
+def extract_content_features(url):
+    features = {}
+    try:
+        response = requests.get(url, timeout=5)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        features['MissingTitle'] = 1 if not soup.title or not soup.title.string.strip() else 0
+        forms = soup.find_all('form')
+        features['InsecureForms'] = sum(1 for form in forms if form.get('action', '').startswith('http://'))
+    except requests.RequestException:
+        features['MissingTitle'] = 1
+        features['InsecureForms'] = 0
+    return features
 
+# Combine all features
+def extract_all_features(url):
+    string_features = extract_string_features(url)
+    content_features = extract_content_features(url)
+    all_features = {**string_features, **content_features}
+    return all_features
+
+# API endpoint for prediction
+@app.route('/classify', methods=['POST'])
+def predict():
+    data = request.get_json()
+    url = data.get('url')
     if not url:
-        return jsonify({'error': 'URL is missing'}), 400
-    
+        return jsonify({"error": "No URL provided"}), 400
+
     # Extract features
-    features = extract_features(url)
-    features_df = pd.DataFrame([features])
-    
+    features = extract_all_features(url)
+
+    # Convert features to a DataFrame
+    features_df = pd.DataFrame([features])  # Ensure it matches training column order
+
     # Predict using the model
     prediction = model.predict(features_df)[0]
-    return jsonify({'phishing': bool(prediction)})
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    # Convert prediction to a readable format
+    result = "Phishing" if prediction == 1 else "Legitimate"
+
+    return jsonify({"url": url, "prediction": result})

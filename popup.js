@@ -1,27 +1,20 @@
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const url = tabs[0].url;
-    fetch("http://127.0.0.1:5000/classify", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ url: url })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const resultElement = document.getElementById("result");
-        if (data.phishing) {
-            resultElement.textContent = "This is a phishing site!";
-            resultElement.style.color = "red";
+document.getElementById("checkPhishing").addEventListener("click", () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, { action: "checkPhishing" }, (response) => {
+        const resultDiv = document.getElementById("result");
+        if (response && response.prediction) {
+          if (response.prediction === "Phishing") {
+            resultDiv.textContent = "⚠️ Warning: This site is phishing!";
+            resultDiv.style.color = "red";
+          } else {
+            resultDiv.textContent = "✅ This site is safe.";
+            resultDiv.style.color = "green";
+          }
         } else {
-            resultElement.textContent = "This site is safe.";
-            resultElement.style.color = "green";
+          resultDiv.textContent = "Error: Could not determine.";
+          resultDiv.style.color = "gray";
         }
-    })
-    .catch(error => {
-        const resultElement = document.getElementById("result");
-        resultElement.textContent = "Error analyzing the site.";
-        resultElement.style.color = "orange";
-        console.error("Error:", error);
+      });
     });
-});
+  });
+  

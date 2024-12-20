@@ -1,16 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Phishing Detector</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 10px; text-align: center; }
-        #result { margin-top: 20px; font-size: 18px; font-weight: bold; }
-    </style>
+  <title>Phishing Detection</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 300px;
+      padding: 10px;
+    }
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <h1>Phishing Detector</h1>
-    <p>Analyzing the current site...</p>
-    <div id="result"></div>
-    <script src="popup.js"></script>
+  <h2>Phishing Detector</h2>
+  <button id="checkPhishing">Check Current Site</button>
+  <div id="result"></div>
+  <script src="popup.js"></script>
 </body>
 </html>
