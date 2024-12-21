@@ -83,3 +83,6 @@ def predict():
     result = "Phishing" if prediction == 1 else "Legitimate"
 
     return jsonify({"url": url, "prediction": result})
+
+if __name__ == '__main__':
+    app.run(debug=True)
