@@ -10,7 +10,7 @@ import re
 app = Flask(__name__)
 
 # Load the trained model
-model = joblib.load(open("phishing_model.pkl", "rb"))
+model = joblib.load("phishing_model.joblib")
 
 # String-based feature extraction function
 def extract_string_features(url):
@@ -42,15 +42,28 @@ def extract_content_features(url):
         features['InsecureForms'] = 0
     return features
 
+# Runtime-Based feature extraction function
+def extract_runtime_features(url):
+    features = {
+        'RightClickDisabled': 0,           # Default: Right-click is allowed
+        'IframeOrFrame': 0,               # Default: No <iframe> or <frame> tags
+        'PopUpWindow': 0,                 # Default: No pop-ups triggered
+        'SubmitInfoToEmail': 0,           # Default: No email-based form actions
+        'FakeLinkInStatusBar': 0,         # Default: No fake/misleading links
+        'FrequentDomainNameMismatch': 0,  # Default: No frequent domain mismatches
+    }
+    return features
+
 # Combine all features
 def extract_all_features(url):
     string_features = extract_string_features(url)
     content_features = extract_content_features(url)
-    all_features = {**string_features, **content_features}
+    runtime_features = extract_runtime_features(url)
+    all_features = {**string_features, **content_features, **runtime_features}
     return all_features
 
 # API endpoint for prediction
-@app.route('/classify', methods=['POST'])
+@app.route('/predict', methods=['POST'])
 def predict():
     data = request.get_json()
     url = data.get('url')
