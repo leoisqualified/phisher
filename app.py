@@ -1,21 +1,24 @@
 from flask import Flask, request, jsonify
-import joblib  
+import joblib
 from bs4 import BeautifulSoup
 import requests
 from urllib.parse import urlparse
-import tldextract
 import pandas as pd
 import re
+import logging
 
 app = Flask(__name__)
 
-# Load the trained model
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# Load the trained model and feature names
 model = joblib.load("phishing_model.joblib")
+feature_names = joblib.load("feature_names.joblib")  # List of feature names used during training
 
 # String-based feature extraction function
 def extract_string_features(url):
     features = {}
-    # Implement the string feature extraction logic
     features['UrlLength'] = len(url)
     features['NumDots'] = url.count('.')
     features['NumDash'] = url.count('-')
@@ -37,7 +40,8 @@ def extract_content_features(url):
         features['MissingTitle'] = 1 if not soup.title or not soup.title.string.strip() else 0
         forms = soup.find_all('form')
         features['InsecureForms'] = sum(1 for form in forms if form.get('action', '').startswith('http://'))
-    except requests.RequestException:
+    except requests.RequestException as e:
+        logging.error(f"Error fetching content for URL: {url} - {e}")
         features['MissingTitle'] = 1
         features['InsecureForms'] = 0
     return features
@@ -70,19 +74,25 @@ def predict():
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # Extract features
-    features = extract_all_features(url)
+    try:
+        # Extract features
+        features = extract_all_features(url)
 
-    # Convert features to a DataFrame
-    features_df = pd.DataFrame([features])  # Ensure it matches training column order
+        # Align features with model's expected feature set
+        features_df = pd.DataFrame([features])
+        features_df = features_df.reindex(columns=feature_names, fill_value=0)  # Ensure correct columns/order
 
-    # Predict using the model
-    prediction = model.predict(features_df)[0]
+        # Predict using the model
+        prediction = model.predict(features_df)[0]
 
-    # Convert prediction to a readable format
-    result = "Phishing" if prediction == 1 else "Legitimate"
+        # Convert prediction to a readable format
+        result = "Phishing" if prediction == 1 else "Legitimate"
 
-    return jsonify({"url": url, "prediction": result})
+        return jsonify({"url": url, "prediction": result})
+    
+    except Exception as e:
+        logging.error(f"Error during prediction for URL: {url} - {e}")
+        return jsonify({"error": "An error occurred during prediction"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
