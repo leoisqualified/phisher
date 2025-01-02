@@ -7,6 +7,12 @@ import pandas as pd
 import re
 import logging
 import tldextract
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.alert import Alert
 
 app = Flask(__name__)
 
@@ -97,17 +103,78 @@ def extract_content_features(url):
         features['ImagesOnlyInForm'] = 0
     return features
 
-# Runtime-Based feature extraction function
+
+
 def extract_runtime_features(url):
     features = {
-        'RightClickDisabled': 0,           # Default: Right-click is allowed
-        'IframeOrFrame': 0,               # Default: No <iframe> or <frame> tags
-        'PopUpWindow': 0,                 # Default: No pop-ups triggered
-        'SubmitInfoToEmail': 0,           # Default: No email-based form actions
-        'FakeLinkInStatusBar': 0,         # Default: No fake/misleading links
-        'FrequentDomainNameMismatch': 0,  # Default: No frequent domain mismatches
+        'RightClickDisabled': 0,
+        'IframeOrFrame': 0,
+        'PopUpWindow': 0,
+        'SubmitInfoToEmail': 0,
+        'FakeLinkInStatusBar': 0,
+        'FrequentDomainNameMismatch': 0,
     }
+
+    try:
+        # Set up Selenium WebDriver
+        options = Options()
+        options.add_argument('--headless')  # Run in headless mode
+        options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
+        driver = webdriver.Chrome(service=Service('chromedriver'), options=options)
+
+        # Open the URL
+        driver.get(url)
+
+        # 1. Check if right-click is disabled
+        try:
+            action = ActionChains(driver)
+            action.context_click().perform()  # Attempt right-click
+            features['RightClickDisabled'] = 0  # If no exception, right-click works
+        except:
+            features['RightClickDisabled'] = 1  # Right-click disabled
+
+        # 2. Check for <iframe> or <frame> tags
+        iframe_count = len(driver.find_elements(By.TAG_NAME, 'iframe')) + len(driver.find_elements(By.TAG_NAME, 'frame'))
+        features['IframeOrFrame'] = 1 if iframe_count > 0 else 0
+
+        # 3. Detect pop-ups
+        try:
+            driver.execute_script("window.open('about:blank', '_blank');")
+            if len(driver.window_handles) > 1:
+                features['PopUpWindow'] = 1
+            driver.switch_to.window(driver.window_handles[0])  # Switch back
+        except:
+            features['PopUpWindow'] = 0
+
+        # 4. Check for forms submitting data to email
+        page_source = driver.page_source
+        soup = BeautifulSoup(page_source, 'html.parser')
+        forms = soup.find_all('form')
+        features['SubmitInfoToEmail'] = sum(1 for form in forms if re.search(r'mailto:', form.get('action', '')))
+
+        # 5. Detect fake links in the status bar
+        links = soup.find_all('a', href=True)
+        fake_links = [link for link in links if link['href'] and 'javascript:' in link['href'].lower()]
+        features['FakeLinkInStatusBar'] = 1 if fake_links else 0
+
+        # 6. Frequent domain name mismatch
+        domain = requests.get(url).url.split('/')[2]
+        resources = soup.find_all(['img', 'script', 'link'])
+        mismatched_domains = sum(1 for res in resources if res.get('src', '').find(domain) == -1 and res.get('src', '').startswith('http'))
+        features['FrequentDomainNameMismatch'] = 1 if mismatched_domains > len(resources) * 0.5 else 0
+
+    except Exception as e:
+        print(f"Runtime feature extraction failed for {url}: {e}")
+
+    finally:
+        try:
+            driver.quit()
+        except:
+            pass  # If the driver isn't initialized, just ignore
+
     return features
+
 
 # Combine all features
 def extract_all_features(url):
@@ -131,7 +198,7 @@ def predict():
 
         # Align features with model's expected feature set
         features_df = pd.DataFrame([features])
-        features_df = features_df.reindex(columns=feature_names, fill_value=0)  # Ensure correct columns/order
+        features_df = features_df.reindex(columns=feature_names, fill_value=0)  # Ensure correct columns order
 
         # Predict using the model
         prediction = model.predict(features_df)[0]
