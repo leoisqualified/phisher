@@ -13,6 +13,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.alert import Alert
+import spacy
+
+
 
 app = Flask(__name__)
 
@@ -22,6 +25,25 @@ logging.basicConfig(level=logging.INFO)
 # Load the trained model and feature names
 model = joblib.load("phishing_model.joblib")
 feature_names = joblib.load("feature_names.joblib")  # List of feature names used during training
+
+BRAND_NAMES = ['paypal', 'amazon', 'facebook', 'google', 'microsoft', 'apple', 
+               'bankofamerica', 'chase', 'wellsfargo', 'linkedin', 'ebay', 'twitter']
+
+nlp = spacy.load("en_core_web_sm")
+
+def detect_brand_name(hostname):
+    # Check the static list first
+    if any(brand in hostname.lower() for brand in BRAND_NAMES):
+        return 1
+    
+    # If not found, use NLP-based detection
+    doc = nlp(hostname)
+    for ent in doc.ents:
+        if ent.label_ == "ORG":  # Organization name detected
+            return 1
+    
+    # If neither method detects a brand name
+    return 0
 
 # String-based feature extraction function
 def extract_string_features(url):
@@ -63,48 +85,44 @@ def extract_string_features(url):
     features['DomainInPaths'] = 1 if ext.domain in path else 0
     features['HttpsInHostname'] = 1 if 'https' in hostname else 0
 
+    # Missing Features
+    features['NumQueryComponents'] = len(parsed_url.query.split('&')) if parsed_url.query else 0
+    features['NumAmpersand'] = url.count('&')
+    features['NumHash'] = url.count('#')
+    features['NumSensitiveWords'] = sum(word in url.lower() for word in ['secure', 'login', 'verify', 'account'])
+    features['EmbeddedBrandName'] = detect_brand_name(hostname)
     return features
 
 # Content-based feature extraction function
 def extract_content_features(url):
     features = {}
     try:
-        # Make a request to the url
         response = requests.get(url, timeout=5)
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Title and form checks
+        # Features to extract
         features['MissingTitle'] = 1 if not soup.title or not soup.title.string.strip() else 0
         forms = soup.find_all('form')
         features['InsecureForms'] = sum(1 for form in forms if form.get('action', '').startswith('http://'))
+        features['ExtFavicon'] = 1 if soup.find('link', rel='icon') and 'http' in soup.find('link', rel='icon')['href'] else 0
+        features['RelativeFormAction'] = sum(1 for form in forms if form.get('action', '').startswith('/'))
+        features['ExtFormAction'] = sum(1 for form in forms if form.get('action', '').startswith('http://'))
+        features['AbnormalFormAction'] = sum(1 for form in forms if not form.get('action', '').startswith(('http', '/')))
+        features['PctNullSelfRedirectHyperlinks'] = len(soup.find_all('a', href='#')) / len(soup.find_all('a')) if soup.find_all('a') else 0
 
-        # External links and resources
-        total_links = soup.find_all('a')
-        ext_links = [link for link in total_links if link.get('href', '').startswith('http')]
-        features['PctExtHyperlinks'] = len(ext_links) / len(total_links) if total_links else 0
-
-        total_resources = soup.find_all(['script', 'link', 'img'])
-        ext_resources = [
-            res for res in total_resources if res.get('src', '').startswith('http') or res.get('href', '').startswith('http')
-        ]
-        features['PctExtResourceUrls'] = len(ext_resources) / len(total_resources) if total_resources else 0
-
-        # Images-only forms
-        features['ImagesOnlyInForm'] = 1 if all(
-            child.name == 'img' for form in forms for child in form.children
-        ) else 0
-
-    except requests.RequestException as e:
-        logging.error(f"Error fetching content for URL: {url} - {e}")
+    except requests.RequestException:
         features['MissingTitle'] = 1
         features['InsecureForms'] = 0
-        features['PctExtHyperlinks'] = 0
-        features['PctExtResourceUrls'] = 0
-        features['ImagesOnlyInForm'] = 0
+        features['ExtFavicon'] = 0
+        features['RelativeFormAction'] = 0
+        features['ExtFormAction'] = 0
+        features['AbnormalFormAction'] = 0
+        features['PctNullSelfRedirectHyperlinks'] = 0
     return features
 
 
 
+# Runtime Based feature extraction
 def extract_runtime_features(url):
     features = {
         'RightClickDisabled': 0,
@@ -163,6 +181,30 @@ def extract_runtime_features(url):
         resources = soup.find_all(['img', 'script', 'link'])
         mismatched_domains = sum(1 for res in resources if res.get('src', '').find(domain) == -1 and res.get('src', '').startswith('http'))
         features['FrequentDomainNameMismatch'] = 1 if mismatched_domains > len(resources) * 0.5 else 0
+
+        # Add these to the extract_runtime_features function above
+
+        # 7. Percentage of external resource URLs (Runtime)
+        total_resources = len(resources)
+        external_resources = sum(1 for res in resources if res.get('src', '').startswith('http') and domain not in res.get('src', ''))
+        features['PctExtResourceUrlsRT'] = external_resources / total_resources if total_resources > 0 else 0
+
+        # 8. Abnormal external form actions (Runtime)
+        abnormal_forms = sum(1 for form in forms if form.get('action', '').startswith('http') and domain not in form.get('action', ''))
+        features['AbnormalExtFormActionR'] = 1 if abnormal_forms > 0 else 0
+
+        # 9. External metadata, scripts, and links (Runtime)
+        external_meta_scripts_links = sum(
+            1 for tag in soup.find_all(['meta', 'script', 'link']) 
+            if tag.get('src', '').startswith('http') or tag.get('href', '').startswith('http')
+        )
+        total_meta_scripts_links = len(soup.find_all(['meta', 'script', 'link']))
+        features['ExtMetaScriptLinkRT'] = external_meta_scripts_links / total_meta_scripts_links if total_meta_scripts_links > 0 else 0
+
+        # 10. Null or self-redirect hyperlinks (Runtime)
+        null_self_redirect_links = sum(1 for link in links if link['href'] in ['#', '/'])
+        features['PctExtNullSelfRedirectHyperlinksRT'] = null_self_redirect_links / len(links) if links else 0
+
 
     except Exception as e:
         print(f"Runtime feature extraction failed for {url}: {e}")

@@ -1,23 +1,13 @@
-import joblib
-import pandas as pd
-from app import extract_all_features  # Import the feature extraction function
+import requests
 
-# Load the trained model
-model = joblib.load("phishing_model.joblib")
-feature_names = joblib.load("feature_names.joblib")
+# URL to test
+test_urls = [
+    "http://paypal-security-check-login-update.com/verify/account123",
+    "https://example-legitimate-site.com",
+    "http://phishy-site-with-popups.com"
+]
 
-# Define the test URL
-test_url = "http://paypal-security-check-login-update.com/verify/account123"
-
-# Extract features for the test URL
-features = extract_all_features(test_url)
-print("Extracted Features:", features)
-
-# Convert features to DataFrame and reorder columns
-features_df = pd.DataFrame([features])[feature_names]
-print("Features DataFrame:\n", features_df)
-
-# Make a prediction
-prediction = model.predict(features_df)[0]
-result = "Phishing" if prediction == 1 else "Legitimate"
-print(f"Prediction for {test_url}: {result}")
+for url in test_urls:
+    response = requests.post("http://127.0.0.1:5000/predict", json={"url": url})
+    print(f"Testing URL: {url}")
+    print("Response:", response.json())
