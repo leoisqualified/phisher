@@ -12,7 +12,7 @@ document.getElementById("checkPhishing").addEventListener("click", () => {
           }
         } else {
           resultDiv.textContent = "Error: Could not determine.";
-          resultDiv.style.color = "gray";
+          resultDiv.style.color = "red";
         }
       });
     });

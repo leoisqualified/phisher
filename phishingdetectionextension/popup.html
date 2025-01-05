@@ -4,14 +4,43 @@
   <title>Phishing Detection</title>
   <style>
     body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 20px;
       font-family: Arial, sans-serif;
       width: 300px;
       padding: 10px;
+      background: whitesmoke;
     }
     #result {
       margin-top: 20px;
       font-weight: bold;
       text-align: center;
+    }
+
+    #checkPhishing {
+      background: none;
+      color: green;
+      border: 1px solid green;
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      transition: transform 0.5s ease box-shadow 0.5s ease;
+    }
+
+    #checkPhishing:hover {
+      background: green;
+      color: white;
+      transform: scale(1.1);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    h2 {
+      font-size: 20px;
+      text-align: center;
+      font-family: monospace;
     }
   </style>
 </head>
