@@ -227,6 +227,10 @@ def extract_all_features(url):
     all_features = {**string_features, **content_features, **runtime_features}
     return all_features
 
+@app.route('/')
+def home():
+    return "Phishing Detection API is running."
+
 # API endpoint for prediction
 @app.route('/predict', methods=['POST'])
 def predict():
