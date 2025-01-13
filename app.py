@@ -14,11 +14,15 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.alert import Alert
+from flask_cors import CORS
 import spacy
 
 
 
 app = Flask(__name__)
+
+# Enable CORS
+CORS(app)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

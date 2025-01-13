@@ -7,10 +7,10 @@ document.getElementById("checkPhishing").addEventListener("click", () => {
         const resultDiv = document.getElementById("result");
         if (response && response.prediction) {
           if (response.prediction === "Phishing") {
-            resultDiv.textContent = "⚠️ Warning: This site is phishing!";
+            resultDiv.textContent = "Oh oh, not good";
             resultDiv.style.color = "red";
           } else {
-            resultDiv.textContent = "This site is safe.";
+            resultDiv.textContent = "Good to go!";
             resultDiv.style.color = "green";
           }
         } else {
