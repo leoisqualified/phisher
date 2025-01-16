@@ -238,29 +238,40 @@ def home():
 # API endpoint for prediction
 @app.route('/predict', methods=['POST'])
 def predict():
+    """
+    API endpoint to predict if a given URL is phishing or legitimate.
+    Expects a JSON payload with the key "url".
+    """
     data = request.get_json()
+    app.logger.info(f"Received request data: {data}")
+    
     url = data.get('url')
     if not url:
+        app.logger.error("No URL provided in the request.")
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        # Extract features
+        # Extract features from the provided URL
+        app.logger.info(f"Extracting features for URL: {url}")
         features = extract_all_features(url)
 
-        # Align features with model's expected feature set
+        # Align features with the model's expected input
         features_df = pd.DataFrame([features])
-        features_df = features_df.reindex(columns=feature_names, fill_value=0)  # Ensure correct columns order
+        features_df = features_df.reindex(columns=feature_names, fill_value=0)  # Ensure column alignment
+        
+        # Log extracted features (only in debug mode for security)
+        app.logger.debug(f"Extracted features: {features}")
 
-        # Predict using the model
+        # Make prediction
         prediction = model.predict(features_df)[0]
+        app.logger.info(f"Prediction result for URL {url}: {prediction}")
 
-        # Convert prediction to a readable format
+        # Format the result
         result = "Phishing" if prediction == 1 else "Legitimate"
-
         return jsonify({"url": url, "prediction": result})
     
     except Exception as e:
-        logging.error(f"Error during prediction for URL: {url} - {e}")
+        app.logger.error(f"Error during prediction for URL {url}: {e}")
         return jsonify({"error": "An error occurred during prediction"}), 500
 
 if __name__ == '__main__':
