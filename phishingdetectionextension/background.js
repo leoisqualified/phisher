@@ -1,24 +1,25 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "checkPhishing") {
-    console.log("Message received in background:", message);
+    const url = message.url;
 
-    // Send a request to the Flask server
     fetch("http://127.0.0.1:5000/predict", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: message.url }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url: url }),
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log("Response from server:", data);
-        sendResponse(data);
+        sendResponse(data); // Ensure this sends back a response
       })
       .catch((error) => {
-        console.error("Error:", error);
-        sendResponse({ error: "Could not connect to the server." });
+        console.error("Error fetching prediction:", error);
+        sendResponse({ error: "Failed to fetch prediction" });
       });
 
-    // Keep the message channel open for async responses
-    return true;
+    return true; // Keeps the message channel open for async responses
+  } else {
+    sendResponse({ error: "Invalid action" });
   }
 });
