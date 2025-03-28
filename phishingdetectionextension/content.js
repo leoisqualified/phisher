@@ -1,23 +1,25 @@
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "checkPhishing") {
-    const url = window.location.href;
+// Get the current page URL
+const url = window.location.href;
 
-    fetch("http://127.0.0.1:5000/predict", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ url: url }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        sendResponse({ isPhishing: data.prediction === "Phishing" });
-      })
-      .catch((error) => {
-        console.error("Fetch error:", error);
-        sendResponse({ error: "Failed to fetch prediction." });
-      });
+// Send message to background script to check phishing
+chrome.runtime.sendMessage(
+  { action: "checkPhishing", url: url },
+  (response) => {
+    if (chrome.runtime.lastError) {
+      console.error("Runtime error:", chrome.runtime.lastError.message);
+      return;
+    }
 
-    return true; // Keeps the response channel open for async operations
+    if (response && response.prediction === "Phishing") {
+      console.warn("Phishing site detected:", url);
+
+      // Optional blocking (can be turned on/off via settings)
+      const blockSite = true; // Set this dynamically based on user preferences
+      if (blockSite) {
+        document.body.innerHTML = `<h1 style="color:red; text-align:center; margin-top:20%;">⚠️ Warning: This website is flagged as phishing! ⚠️</h1>`;
+      } else {
+        alert("⚠️ Warning: This website is flagged as phishing!");
+      }
+    }
   }
-});
+);
