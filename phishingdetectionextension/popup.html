@@ -2,13 +2,76 @@
 <html>
   <head>
     <title>Phishing Detector</title>
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div id="container">
-      <h1>Phishing Detector</h1>
-      <button id="checkPhishing">Check Current Website</button>
-      <p id="result"></p>
+    <div class="container">
+      <div class="header">
+        <img src="icons/shield-icon.png" alt="Shield Icon" class="logo" />
+        <h1>Phishing Detector</h1>
+        <p class="subtitle">Stay safe from fraudulent websites</p>
+      </div>
+
+      <div class="scan-section">
+        <button id="checkPhishing" class="scan-button">
+          <span class="button-icon">🔍</span>
+          Scan Current Website
+        </button>
+      </div>
+
+      <div id="result" class="result-container hidden">
+        <div class="status-indicator">
+          <div class="status-icon"></div>
+          <h2 class="status-title">Scanning...</h2>
+        </div>
+        <div class="details">
+          <div class="detail-row">
+            <span class="detail-label">URL:</span>
+            <span id="url-display" class="detail-value">example.com</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status:</span>
+            <span id="status-display" class="detail-value">Checking...</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Risk Factors:</span>
+            <span id="risk-display" class="detail-value">Analyzing...</span>
+          </div>
+        </div>
+
+        <div id="warning-message" class="warning-message hidden">
+          <div class="warning-icon">⚠️</div>
+          <div class="warning-content">
+            <h3>Potential Phishing Detected!</h3>
+            <p id="warning-details">
+              This website exhibits characteristics commonly found in phishing
+              attempts.
+            </p>
+          </div>
+        </div>
+
+        <div id="safe-message" class="safe-message hidden">
+          <div class="safe-icon">✅</div>
+          <div class="safe-content">
+            <h3>Website Appears Safe</h3>
+            <p>No significant phishing indicators detected.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p class="last-updated">
+          Database updated: <span id="update-date">Today</span>
+        </p>
+        <button class="report-button" id="reportSite">
+          Report Suspicious Site
+        </button>
+      </div>
     </div>
     <script src="popup.js"></script>
   </body>

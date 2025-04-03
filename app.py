@@ -31,7 +31,7 @@ xgb_model = xgb.Booster()
 xgb_model.load_model("xgboost_model.json")
 feature_names = joblib.load("feature_names.joblib")
 
-nlp = spacy.load("en_core_web_sm")
+# nlp = spacy.load("en_core_web_sm")
 
 # Selenium WebDriver Configuration
 chrome_options = Options()
@@ -150,7 +150,7 @@ def predict():
         final_score = (0.6 * bert_score) + (0.4 * xgb_score)
         is_phishing = final_score > 0.5
         
-        return jsonify({"url": url, "isPhishing": is_phishing, "bert_score": bert_score, "xgb_score": xgb_score})
+        return jsonify({"url": url, "isPhishing": bool(is_phishing)})
     except Exception as e:
         logging.error(f"Error during prediction: {e}")
         return jsonify({"error": "An error occurred during prediction"}), 500

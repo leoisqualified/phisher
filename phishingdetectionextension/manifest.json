@@ -1,15 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Phishing Detector",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Detect phishing websites using Flask server.",
   "permissions": [
     "activeTab",
     "tabs",
     "storage",
     "scripting",
-    "webRequest",
-    "webRequestBlocking"
+    "declarativeNetRequest"
   ],
   "host_permissions": ["http://127.0.0.1:5000/*"],
   "background": {
@@ -22,6 +21,15 @@
       "run_at": "document_start"
     }
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
