@@ -3,20 +3,167 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Phishing Warning</title>
+    <title>Security Warning - Phishing Detected</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="warning-container">
-      <img src="icons/shield-icon.png" alt="Warning" class="warning-icon" />
-      <h1>⚠️ Warning: Potential Phishing Site Detected!</h1>
-      <p>This website has been flagged as a potential phishing attempt.</p>
-      <button onclick="goBack()">Return to Safety</button>
+    <div class="warning-page">
+      <div class="warning-header">
+        <div class="warning-badge">
+          <svg
+            class="warning-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 9V14"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <path
+              d="M12 17V17.01"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <path
+              d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+          </svg>
+          <span>SECURITY WARNING</span>
+        </div>
+        <h1>Potential Phishing Threat Detected</h1>
+      </div>
+
+      <div class="warning-content">
+        <div class="alert-card alert-critical">
+          <div class="alert-icon">!</div>
+          <div class="alert-message">
+            <h2>This website is suspicious</h2>
+            <p>
+              Our system has detected characteristics commonly associated with
+              phishing attempts:
+            </p>
+            <ul class="risk-factors">
+              <li>Mismatched domain information</li>
+              <li>Suspicious login page elements</li>
+              <li>Unverified security certificates</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="website-info">
+          <div class="info-row">
+            <span class="info-label">Website:</span>
+            <span id="phishing-url" class="info-value"
+              >https://example-fake-login.com</span
+            >
+          </div>
+          <div class="info-row">
+            <span class="info-label">Threat Level:</span>
+            <span class="info-value threat-high">High Risk</span>
+          </div>
+        </div>
+
+        <div class="recommendation">
+          <h3>Recommended Action:</h3>
+          <p>
+            Do not enter any personal information. This site may be attempting
+            to steal your credentials or financial details.
+          </p>
+        </div>
+      </div>
+
+      <div class="warning-actions">
+        <button class="action-button action-primary" onclick="goBack()">
+          <svg
+            class="button-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M5 12H19"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <path
+              d="M12 5L5 12L12 19"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          Return to Safety
+        </button>
+        <button class="action-button action-secondary" id="reportButton">
+          <svg
+            class="button-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+            <path
+              d="M12 8V12"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <path
+              d="M12 16H12.01"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          Report This Site
+        </button>
+      </div>
+
+      <div class="warning-footer">
+        <p>
+          Powered by <strong>Phishing Detector</strong> •
+          <span id="current-date"></span>
+        </p>
+      </div>
     </div>
+
     <script>
       function goBack() {
-        history.back();
+        window.history.back();
       }
+
+      // Display current date
+      document.getElementById("current-date").textContent =
+        new Date().toLocaleDateString();
+
+      // Display actual URL (you would replace this with your actual URL detection logic)
+      document.getElementById("phishing-url").textContent =
+        window.location.hostname;
+
+      // Report button functionality
+      document
+        .getElementById("reportButton")
+        .addEventListener("click", function () {
+          // Add your reporting logic here
+          alert(
+            "Thank you for reporting this suspicious site. Our security team will investigate."
+          );
+        });
     </script>
   </body>
 </html>

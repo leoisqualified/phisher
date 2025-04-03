@@ -22,9 +22,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .then((data) => {
         console.log("Response from server:", data);
+
         if (data.isPhishing) {
-          chrome.tabs.update(sender.tab.id, { url: "warning.html" });
+          // Block and redirect phishing site
+          chrome.declarativeNetRequest.updateDynamicRules({
+            removeRuleIds: [1], // Remove existing rule
+            addRules: [
+              {
+                id: 1,
+                priority: 1,
+                action: {
+                  type: "redirect",
+                  redirect: { extensionPath: "/warning.html" },
+                },
+                condition: {
+                  urlFilter: url,
+                  resourceTypes: ["main_frame"],
+                },
+              },
+            ],
+          });
         } else {
+          // Show notification for safe sites
           chrome.notifications.create({
             type: "basic",
             iconUrl: "icons/icon128.png",
