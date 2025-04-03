@@ -22,6 +22,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .then((data) => {
         console.log("Response from server:", data);
+        if (data.isPhishing) {
+          chrome.tabs.update(sender.tab.id, { url: "warning.html" });
+        } else {
+          chrome.notifications.create({
+            type: "basic",
+            iconUrl: "icons/icon128.png",
+            title: "Phishing Detector",
+            message: "This site is safe.",
+          });
+        }
         sendResponse(data);
       })
       .catch((error) => {
@@ -30,5 +40,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
 
     return true; // Keeps the message channel open for async response
+  }
+});
+
+// Automatically scan URLs when a new tab is opened or updated
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete" && tab.url) {
+    chrome.runtime.sendMessage({ action: "checkPhishing", url: tab.url });
   }
 });

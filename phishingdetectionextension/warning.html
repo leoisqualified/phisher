@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phishing Warning</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="warning-container">
+      <img src="icons/shield-icon.png" alt="Warning" class="warning-icon" />
+      <h1>⚠️ Warning: Potential Phishing Site Detected!</h1>
+      <p>This website has been flagged as a potential phishing attempt.</p>
+      <button onclick="goBack()">Return to Safety</button>
+    </div>
+    <script>
+      function goBack() {
+        history.back();
+      }
+    </script>
+  </body>
+</html>
