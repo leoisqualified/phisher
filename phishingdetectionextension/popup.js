@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const warningMessage = document.getElementById("warning-message");
   const safeMessage = document.getElementById("safe-message");
 
+  // Click-to-scan behavior
   checkButton.addEventListener("click", () => {
     // Reset UI
     resultContainer.classList.remove("hidden");
@@ -15,18 +16,15 @@ document.addEventListener("DOMContentLoaded", () => {
     statusDisplay.textContent = "Scanning...";
     riskDisplay.textContent = "Analyzing...";
 
-    // Get the URL of the active tab
+    // Get the active tab's URL
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
       const url = activeTab.url;
 
-      urlDisplay.textContent = url; // Show the scanned URL
+      urlDisplay.textContent = url;
 
-      console.log("Checking URL:", url);
-
-      // Send the URL to the background script for analysis
       chrome.runtime.sendMessage(
-        { action: "checkPhishing", url: url },
+        { action: "checkPhishing", url },
         (response) => {
           if (chrome.runtime.lastError) {
             console.error("Runtime error:", chrome.runtime.lastError.message);
@@ -35,12 +33,10 @@ document.addEventListener("DOMContentLoaded", () => {
           }
 
           if (response.error) {
-            console.error("Response error:", response.error);
             statusDisplay.textContent = response.error;
             return;
           }
 
-          // Update UI with results
           const isPhishing = response.isPhishing;
           statusDisplay.textContent = isPhishing
             ? "Phishing Detected!"
@@ -55,5 +51,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       );
     });
+  });
+
+  // 🔁 Handle automatic feedback from background.js
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === "siteSafe") {
+      resultContainer.classList.remove("hidden");
+      warningMessage.classList.add("hidden");
+      safeMessage.classList.remove("hidden");
+      statusDisplay.textContent = "Safe Website";
+      riskDisplay.textContent = "Low Risk";
+    }
   });
 });
