@@ -49,11 +49,8 @@ This project involves developing a **Phishing Detection System** using machine l
 ### 3. Model Selection
 
 - **Algorithms Used**:
-  - Logistic Regression
-  - Decision Trees
-  - Random Forest
-  - Support Vector Machines (SVM)
-  - Gradient Boosting (e.g., XGBoost)
+  - Gradient Boosting (XGBoost)
+  - BERT
 - **Evaluation Metrics**:
   - Accuracy
   - Precision, Recall, and F1 Score
@@ -84,12 +81,10 @@ This project involves developing a **Phishing Detection System** using machine l
 
 ### Challenges
 
-- Imbalanced Dataset: Addressed using techniques like oversampling (SMOTE) or undersampling.
 - Feature Engineering: Required significant domain knowledge to derive useful features.
 
 ### Future Work
 
-- Integrating the system with browser extensions for real-time detection.
 - Expanding the dataset to include newer phishing patterns.
 - Testing deep learning models for potential performance improvement.
 
@@ -107,10 +102,10 @@ This project demonstrates the effectiveness of machine learning in detecting phi
 
    ```bash
    https://github.com/leoisqualified/Phishing-Detection-Using-Machine-Learning.git
-    ```
+   ```
 
 2. Install Required Dependencies:
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+   ```bash
+   pip install -r requirements.txt
+   ```
