@@ -3,7 +3,13 @@
   "name": "Phishy",
   "version": "1.3",
   "description": "Detect and block phishing websites using a Flask server.",
-  "permissions": ["activeTab", "tabs", "storage", "scripting"],
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "scripting",
+    "declarativeNetRequestWithHostAccess"
+  ],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
