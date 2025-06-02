@@ -3,7 +3,6 @@ import logging
 import pandas as pd
 import requests
 import re
-import tldextract
 import torch
 import xgboost as xgb
 from bs4 import BeautifulSoup
@@ -28,10 +27,28 @@ feature_names = joblib.load("feature_names.joblib")
 
 
 def get_bert_prediction(url):
-    inputs = tokenizer(url, return_tensors="pt", truncation=True, max_length=128)
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+        response = requests.get(url, headers=headers, timeout=5)
+        soup = BeautifulSoup(response.text, "html.parser")
+        title = soup.title.string.strip() if soup.title and soup.title.string else ""
+        text_snippet = soup.get_text(separator=' ', strip=True)[:500]
+        full_input = f"{url} {title} {text_snippet}"
+
+        logging.info(f"[BERT] Title: {title}")
+        logging.info(f"[BERT] Snippet: {text_snippet[:100]}...")
+
+    except Exception as e:
+        logging.warning(f"[BERT] Content fetch failed: {e}")
+        full_input = url
+
+    inputs = tokenizer(full_input, return_tensors="pt", truncation=True, max_length=128)
     outputs = bert_model(**inputs)
     probs = torch.softmax(outputs.logits, dim=1)
     return probs[0][1].item()
+
 
 
 def extract_string_features(url):
@@ -52,57 +69,60 @@ def extract_string_features(url):
 
 
 def extract_content_features(url):
-    """ Extract features from webpage content """
     features = {}
     try:
-        response = requests.get(url, timeout=5)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+        response = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Check if page has a title
         features['MissingTitle'] = 1 if not soup.title else 0
 
-        # Count forms and insecure forms
         forms = soup.find_all("form")
         features['InsecureForms'] = sum(1 for form in forms if form.get("action", "").startswith("http://"))
         features['RelativeFormAction'] = sum(1 for form in forms if form.get("action", "").startswith("/"))
 
-        # Count external links
         all_links = soup.find_all("a", href=True)
         ext_links = [link for link in all_links if urlparse(link["href"]).netloc not in url]
         features['PctExtHyperlinks'] = len(ext_links) / max(1, len(all_links))
 
-        # Check for iframes
         features['IframeOrFrame'] = 1 if soup.find("iframe") or soup.find("frame") else 0
 
+        logging.info(f"[Content Features] Extracted: {features}")
+
     except Exception as e:
-        logging.warning(f"Failed to extract content features for {url}: {e}")
+        logging.warning(f"[Content Features] Failed for {url}: {e}")
 
     return features
+
 
 
 def extract_runtime_features(url):
-    """ Extract JavaScript-related features using requests + BeautifulSoup instead of Selenium """
     features = {}
     try:
-        response = requests.get(url, timeout=5)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+        response = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Detect if right-click is disabled (by searching for JavaScript event handlers)
         scripts = soup.find_all("script")
         features['RightClickDisabled'] = any("oncontextmenu" in script.text for script in scripts)
 
-        # Detect fake links (Javascript-based links)
         fake_links = [a for a in soup.find_all("a", href=True) if "javascript:" in a["href"]]
         features['FakeLinkInStatusBar'] = len(fake_links)
 
-        # Detect pop-ups (basic approach: looking for new window-related scripts)
         popups = [script for script in scripts if "window.open" in script.text]
         features['PopUpWindow'] = len(popups)
 
+        logging.info(f"[Runtime Features] Extracted: {features}")
+
     except Exception as e:
-        logging.warning(f"Failed to extract runtime features for {url}: {e}")
+        logging.warning(f"[Runtime Features] Failed for {url}: {e}")
 
     return features
+
 
 
 def extract_all_features(url):
@@ -137,7 +157,7 @@ def predict():
         xgb_score = xgb_model.predict(xgb.DMatrix(features_df))[0]
 
         # Hybrid prediction
-        final_score = (0.6 * bert_score) + (0.4 * xgb_score)
+        final_score = (0.4 * bert_score) + (0.6 * xgb_score)
         is_phishing = final_score > 0.5
 
         return jsonify({"url": url, "isPhishing": bool(is_phishing)})
