@@ -63,4 +63,26 @@ document.addEventListener("DOMContentLoaded", () => {
       riskDisplay.textContent = "Low Risk";
     }
   });
+
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === "autoScanResult") {
+      document.getElementById("result").classList.remove("hidden");
+
+      document.getElementById("url-display").textContent = message.url;
+      document.getElementById("status-display").textContent = message.isPhishing
+        ? "Phishing Detected!"
+        : "Safe Website";
+      document.getElementById("risk-display").textContent = message.isPhishing
+        ? "High Risk"
+        : "Low Risk";
+
+      if (message.isPhishing) {
+        document.getElementById("warning-message").classList.remove("hidden");
+        document.getElementById("safe-message").classList.add("hidden");
+      } else {
+        document.getElementById("safe-message").classList.remove("hidden");
+        document.getElementById("warning-message").classList.add("hidden");
+      }
+    }
+  });
 });

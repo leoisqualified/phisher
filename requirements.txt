@@ -12,3 +12,5 @@ tldextract==3.4.0
 xgboost == 3.0.2
 Werkzeug==2.2.3
 transformers == 4.52.3
+playwright == 1.52.0
+flask_sqlalchemy == 3.1.1

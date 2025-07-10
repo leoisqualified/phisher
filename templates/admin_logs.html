@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Logs</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f5f7fa;
+        margin: 0;
+        padding: 20px;
+        color: #333;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .header {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      h1 {
+        font-size: 24px;
+        color: #2c3e50;
+        margin: 0;
+      }
+      .logs-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+      .logs-table th {
+        background-color: #3498db;
+        color: white;
+        padding: 12px 15px;
+        text-align: left;
+        font-weight: 600;
+      }
+      .logs-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .logs-table tr:last-child td {
+        border-bottom: none;
+      }
+      .logs-table tr:hover {
+        background-color: #f8f9fa;
+      }
+      .verdict-safe {
+        color: #27ae60;
+        font-weight: 600;
+      }
+      .verdict-phishing {
+        color: #e74c3c;
+        font-weight: 600;
+      }
+      .verdict-suspicious {
+        color: #f39c12;
+        font-weight: 600;
+      }
+      .score {
+        font-family: "Courier New", monospace;
+        color: #7f8c8d;
+      }
+      .timestamp {
+        color: #555;
+        font-size: 14px;
+      }
+      .url {
+        max-width: 300px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .search-bar {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        width: 250px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Phishing Detection Logs</h1>
+        <input type="text" class="search-bar" placeholder="Search logs..." />
+      </div>
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>URL</th>
+            <th>Score</th>
+            <th>Verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="timestamp">{{ log.timestamp }}</td>
+            <td class="url" title="{{ log.url }}">{{ log.url }}</td>
+            <td class="score">{{ log.prediction_score }}</td>
+            <td class="verdict-{{ log.verdict.lower() }}">{{ log.verdict }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>
