@@ -86,3 +86,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// Save API Key to Chrome Storage
+document.getElementById("saveApikey").addEventListener("click", () => {
+  const apikey = document.getElementById("apikey-input").value.trim();
+  if (apikey) {
+    chrome.storage.local.set({ companyApiKey: apikey }, () => {
+      document.getElementById("apikey-status").innerText = "API Key saved!";
+      setTimeout(() => {
+        document.getElementById("apikey-status").innerText = "";
+      }, 2000);
+    });
+  }
+});
+
+// Load saved API Key into input on popup open
+document.addEventListener("DOMContentLoaded", () => {
+  chrome.storage.local.get(["companyApiKey"], (result) => {
+    if (result.companyApiKey) {
+      document.getElementById("apikey-input").value = result.companyApiKey;
+    }
+  });
+});

@@ -8,82 +8,111 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
 
-    // Request prediction from Flask server
-    fetch("http://127.0.0.1:5000/predict", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    })
-      .then((response) => {
-        if (!response.ok)
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        return response.json();
+    chrome.storage.local.get(["companyApiKey"], (result) => {
+      const apikey = result.companyApiKey;
+      if (!apikey) {
+        console.warn("No API key set. Aborting request.");
+        sendResponse({ error: "API key missing." });
+        return;
+      }
+
+      fetch("http://127.0.0.1:5000/predict", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-KEY": apikey,
+        },
+        body: JSON.stringify({ url }),
       })
-      .then((data) => {
-        console.log("Response from server:", data);
+        .then((response) => {
+          if (!response.ok)
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Response from server:", data);
 
-        if (data.isPhishing) {
-          // Redirect to warning.html using declarativeNetRequest
-          chrome.declarativeNetRequest.updateDynamicRules({
-            removeRuleIds: [1],
-            addRules: [
-              {
-                id: 1,
-                priority: 1,
-                action: {
-                  type: "redirect",
-                  redirect: { extensionPath: "/warning.html" },
+          if (data.isPhishing) {
+            chrome.declarativeNetRequest.updateDynamicRules({
+              removeRuleIds: [1],
+              addRules: [
+                {
+                  id: 1,
+                  priority: 1,
+                  action: {
+                    type: "redirect",
+                    redirect: { extensionPath: "/warning.html" },
+                  },
+                  condition: {
+                    urlFilter: url,
+                    resourceTypes: ["main_frame"],
+                  },
                 },
-                condition: {
-                  urlFilter: url,
-                  resourceTypes: ["main_frame"],
-                },
-              },
-            ],
-          });
-        } else {
-          // ✅ Send a message to popup (or content script) with safe site feedback
-          chrome.runtime.sendMessage({
-            action: "siteSafe",
-            message: "This site is safe.",
-          });
-        }
+              ],
+            });
+          } else {
+            chrome.runtime.sendMessage({
+              action: "siteSafe",
+              message: "This site is safe.",
+            });
+          }
 
-        sendResponse(data);
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        sendResponse({ error: "Could not connect to the server." });
-      });
+          sendResponse(data);
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          sendResponse({ error: "Could not connect to the server." });
+        });
+    });
 
-    return true;
+    return true; // Keep message channel open for async response
   }
 });
 
-// Auto-scan on tab update
+// ✅ Auto-scan logic when tabs are updated
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === "complete" && tab.url) {
+  if (changeInfo.status !== "complete" || !tab.url) return;
+
+  chrome.storage.local.get(["companyApiKey"], (result) => {
+    const apikey = result.companyApiKey;
+    if (!apikey) {
+      console.warn("No API key set. Skipping auto scan.");
+      return;
+    }
+
     fetch("http://127.0.0.1:5000/predict", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": apikey,
+      },
       body: JSON.stringify({ url: tab.url }),
     })
       .then((response) => response.json())
       .then((data) => {
+        console.log("Auto-scan result:", data);
+
         chrome.tabs.sendMessage(tabId, {
           action: "autoScanResult",
           url: tab.url,
           isPhishing: data.isPhishing,
         });
-      })
-      .catch((error) => console.error("Error checking URL:", error));
-  }
-});
 
-// Show native browser alert
-if (data.isPhishing) {
-  chrome.action.setBadgeText({ text: "⚠️", tabId: tabId });
-  chrome.action.setBadgeBackgroundColor({ color: "#FF0000", tabId: tabId });
-} else {
-  chrome.action.setBadgeText({ text: "", tabId: tabId });
-}
+        // Set badge
+        chrome.action.setBadgeText({
+          text: data.isPhishing ? "⚠️" : "",
+          tabId: tabId,
+        });
+
+        if (data.isPhishing) {
+          chrome.action.setBadgeBackgroundColor({
+            color: "#FF0000",
+            tabId: tabId,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Auto scan failed:", error);
+      });
+  });
+});

@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 import requests
 import re
+import secrets
 import torch
 import xgboost as xgb
 from bs4 import BeautifulSoup
@@ -249,6 +250,7 @@ def is_safe_domain(url):
     domain = urlparse(url).netloc
     return any(safe in domain for safe in SAFE_DOMAINS)
 
+# ============ ROUTES ============
 # Home Route
 @app.route('/')
 def home():
@@ -262,27 +264,45 @@ def predict():
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
+    # 🔐 Step 1: Authenticate company via API key
+    api_key = request.headers.get("X-API-KEY")
+    if not api_key:
+        return jsonify({"error": "Missing API key"}), 401
+
+    company = Company.query.filter_by(api_key=api_key).first()
+    if not company:
+        return jsonify({"error": "Invalid API key"}), 403
+
     try:
-        # Step 1: Get BERT score
+        # 🤖 Step 2: Get BERT score
         bert_score = get_bert_prediction(url)
 
-        # Step 2: Extract features & get XGBoost score
+        # 📊 Step 3: Extract features & XGBoost prediction
         features = extract_all_features(url)
         features_df = pd.DataFrame([features])
         features_df = features_df.reindex(columns=feature_names, fill_value=0)
         xgb_score = xgb_model.predict(xgb.DMatrix(features_df))[0]
 
-        # Step 3: Combine predictions
+        # 🧠 Step 4: Combine scores
         final_score = (0.6 * bert_score) + (0.4 * xgb_score)
         verdict = 'phishing' if final_score > 0.5 else 'safe'
 
-        # Step 4: Log to database
-        log = URLLog(url=url, prediction_score=final_score, verdict=verdict)
+        # 📝 Step 5: Log URL to DB with company_id
+        log = URLLog(
+            url=url,
+            prediction_score=final_score,
+            verdict=verdict,
+            company_id=company.id
+        )
         db.session.add(log)
         db.session.commit()
 
-        # Step 5: Return response
-        return jsonify({"url": url, "score": float(final_score), "verdict": verdict})
+        # 📤 Step 6: Return result
+        return jsonify({
+            "url": url,
+            "score": float(final_score),
+            "verdict": verdict
+        })
 
     except Exception as e:
         logging.error(f"Error during prediction: {e}")
@@ -309,11 +329,42 @@ def add_to_blacklist():
     return jsonify({'message': f'{url} is already blacklisted.'})
 
 # Admin Routes
-@app.route('/admin/logs')
-def view_logs():
-    company = get_company_from_request()  # could use sessions instead for admins
-    logs = URLLog.query.filter_by(company_id=company.id).order_by(URLLog.timestamp.desc()).limit(100).all()
+@app.route('/admin/logs/<int:company_id>')
+def view_company_logs(company_id):
+    logs = URLLog.query.filter_by(company_id=company_id).order_by(URLLog.timestamp.desc()).limit(100).all()
     return render_template('admin_logs.html', logs=logs)
+
+@app.route('/admin/create-company', methods=['POST'])
+def create_company():
+    data = request.get_json()
+    company_name = data.get('name')
+
+    if not company_name:
+        return jsonify({'error': 'Company name is required'}), 400
+
+    # Check if the company already exists
+    existing = Company.query.filter_by(name=company_name).first()
+    if existing:
+        return jsonify({'error': 'Company already exists'}), 400
+
+    # Generate a secure API key
+    api_key = secrets.token_hex(32)
+
+    new_company = Company(name=company_name, api_key=api_key)
+    db.session.add(new_company)
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Company created successfully',
+        'company': {
+            'name': company_name,
+            'api_key': api_key
+        }
+    }), 201
+
+@app.route('/admin/create-company-form')
+def create_company_form():
+    return render_template('admin_create_company.html')
 
 
 if __name__ == '__main__':

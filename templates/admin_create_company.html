@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Create Company</title>
+    <style>
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        background-color: #000000;
+        margin: 0;
+        padding: 40px 20px;
+        color: #ffffff;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 30px;
+        background-color: #111111;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      h1 {
+        font-size: 24px;
+        font-weight: 400;
+        margin: 0 0 30px 0;
+        letter-spacing: 1px;
+        text-align: center;
+        color: #ffffff;
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 300;
+        color: #cccccc;
+        letter-spacing: 0.5px;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px 15px;
+        font-size: 14px;
+        background: transparent;
+        border: 1px solid #333;
+        border-radius: 4px;
+        color: #ffffff;
+        transition: border-color 0.3s ease;
+        box-sizing: border-box;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #4a6bdf;
+      }
+
+      button {
+        width: 100%;
+        padding: 14px;
+        font-size: 14px;
+        background-color: #4a6bdf;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      button:hover {
+        background-color: #3a5bd9;
+      }
+
+      button:disabled {
+        background-color: #333;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      .response {
+        margin-top: 30px;
+        padding: 20px;
+        border-radius: 4px;
+        font-size: 14px;
+        line-height: 1.5;
+        display: none;
+      }
+
+      .success {
+        background-color: rgba(46, 125, 50, 0.2);
+        border-left: 4px solid #2e7d32;
+        color: #a5d6a7;
+      }
+
+      .error {
+        background-color: rgba(211, 47, 47, 0.2);
+        border-left: 4px solid #d32f2f;
+        color: #ef9a9a;
+      }
+
+      .api-key {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 8px 12px;
+        background-color: rgba(74, 107, 223, 0.2);
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        word-break: break-all;
+      }
+
+      .copy-btn {
+        margin-top: 15px;
+        padding: 8px 12px;
+        background: transparent;
+        border: 1px solid #4a6bdf;
+        color: #4a6bdf;
+        font-size: 12px;
+        width: auto;
+        text-transform: none;
+      }
+
+      .copy-btn:hover {
+        background: rgba(74, 107, 223, 0.1);
+      }
+
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 10px;
+        vertical-align: middle;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Create New Company</h1>
+
+      <form id="companyForm">
+        <div class="form-group">
+          <label for="name">Company Name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            placeholder="Enter company name"
+          />
+        </div>
+
+        <button type="submit" id="submitBtn">
+          <span id="btnText">Create Company</span>
+          <span id="btnLoader" class="loading" style="display: none"></span>
+        </button>
+      </form>
+
+      <div id="response" class="response"></div>
+    </div>
+
+    <script>
+      const form = document.getElementById("companyForm");
+      const responseDiv = document.getElementById("response");
+      const submitBtn = document.getElementById("submitBtn");
+      const btnText = document.getElementById("btnText");
+      const btnLoader = document.getElementById("btnLoader");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("name").value.trim();
+
+        // Show loading state
+        submitBtn.disabled = true;
+        btnText.textContent = "Creating...";
+        btnLoader.style.display = "inline-block";
+        responseDiv.style.display = "none";
+
+        try {
+          const res = await fetch("/admin/create-company", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+          });
+
+          const data = await res.json();
+          responseDiv.style.display = "block";
+          responseDiv.className = "response";
+
+          if (res.ok) {
+            responseDiv.classList.add("success");
+            responseDiv.innerHTML = `
+            <strong>Company successfully created</strong><br/><br/>
+            <div><strong>Name:</strong> ${data.company.name}</div>
+            <div style="margin-top: 10px;"><strong>API Key:</strong></div>
+            <div class="api-key">${data.company.api_key}</div>
+            <button class="copy-btn" onclick="navigator.clipboard.writeText('${data.company.api_key}')">Copy API Key</button>
+            <div style="margin-top: 15px; font-size: 13px; color: #aaa;">
+              Please store this API key securely. You won't be able to see it again.
+            </div>
+          `;
+          } else {
+            responseDiv.classList.add("error");
+            responseDiv.innerHTML = `
+            <strong>Error creating company</strong><br/><br/>
+            ${data.error || "An unexpected error occurred. Please try again."}
+          `;
+          }
+        } catch (err) {
+          responseDiv.classList.add("error");
+          responseDiv.innerHTML = `
+          <strong>Request failed</strong><br/><br/>
+          Could not connect to the server. Please check your network connection and try again.
+        `;
+        } finally {
+          // Reset button state
+          submitBtn.disabled = false;
+          btnText.textContent = "Create Company";
+          btnLoader.style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>
