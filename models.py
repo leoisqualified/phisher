@@ -23,3 +23,9 @@ class Company(db.Model):
     name = db.Column(db.String(128), unique=True, nullable=False)
     api_key = db.Column(db.String(64), unique=True, nullable=False)  # For authentication
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+
+class AdminUser(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    email = db.Column(db.String(128), unique=True)
+    password_hash = db.Column(db.String(128))

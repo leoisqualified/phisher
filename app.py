@@ -6,7 +6,7 @@ import re
 import torch
 import xgboost as xgb
 from bs4 import BeautifulSoup
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, abort
 from flask_cors import CORS
 from transformers import BertTokenizer, BertForSequenceClassification
 from urllib.parse import urlparse, parse_qs
@@ -21,8 +21,8 @@ logging.basicConfig(level=logging.INFO)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///phishing_logs.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # (optional, but good practice)
 
-# Import models AFTER app is initialized
-from models import db, URLLog, Blacklist
+# Import models app
+from models import db, URLLog, Blacklist, Company
 db.init_app(app)
 
 # Ensure tables are created inside app context
@@ -288,6 +288,14 @@ def predict():
         logging.error(f"Error during prediction: {e}")
         return jsonify({"error": "An error occurred during prediction"}), 500
 
+def get_company_from_request():
+    api_key = request.headers.get('X-API-KEY')
+    if not api_key:
+        abort(401, description="Missing API Key")
+    company = Company.query.filter_by(api_key=api_key).first()
+    if not company:
+        abort(403, description="Invalid API Key")
+    return company
 
 # Black List Routes
 @app.route('/blacklist/add', methods=['POST'])
@@ -303,8 +311,10 @@ def add_to_blacklist():
 # Admin Routes
 @app.route('/admin/logs')
 def view_logs():
-    logs = URLLog.query.order_by(URLLog.timestamp.desc()).limit(100).all()
+    company = get_company_from_request()  # could use sessions instead for admins
+    logs = URLLog.query.filter_by(company_id=company.id).order_by(URLLog.timestamp.desc()).limit(100).all()
     return render_template('admin_logs.html', logs=logs)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
