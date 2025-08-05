@@ -7,11 +7,12 @@ import secrets
 import torch
 import xgboost as xgb
 from bs4 import BeautifulSoup
-from flask import Flask, request, jsonify, render_template, abort
+from flask import Flask, request, jsonify, render_template, abort, session, redirect, url_for, check_password_hash
 from flask_cors import CORS
 from transformers import BertTokenizer, BertForSequenceClassification
 from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
+from helpers import login_required 
 
 # App initialization
 app = Flask(__name__)
@@ -23,7 +24,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///phishing_logs.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # (optional, but good practice)
 
 # Import models app
-from models import db, URLLog, Blacklist, Company
+from models import db, URLLog, Blacklist, Company, AdminUser
 db.init_app(app)
 
 # Ensure tables are created inside app context
@@ -319,6 +320,7 @@ def get_company_from_request():
 
 # Black List Routes
 @app.route('/blacklist/add', methods=['POST'])
+@login_required
 def add_to_blacklist():
     url = request.json['url']
     reason = request.json.get('reason', 'manual')
@@ -329,10 +331,22 @@ def add_to_blacklist():
     return jsonify({'message': f'{url} is already blacklisted.'})
 
 # Admin Routes
-@app.route('/admin/logs/<int:company_id>')
-def view_company_logs(company_id):
-    logs = URLLog.query.filter_by(company_id=company_id).order_by(URLLog.timestamp.desc()).limit(100).all()
-    return render_template('admin_logs.html', logs=logs)
+
+@app.route('/admin/logs')
+@login_required
+def view_own_logs():
+    admin_id = session.get('admin_id')
+    if not admin_id:
+        return redirect(url_for('admin_login'))
+
+    admin = AdminUser.query.get(admin_id)
+    if not admin:
+        return redirect(url_for('admin_login'))
+
+    logs = URLLog.query.filter_by(company_id=admin.company_id).order_by(URLLog.timestamp.desc()).limit(100).all()
+    company = Company.query.get(admin.company_id)
+
+    return render_template('admin_logs.html', logs=logs, company=company)
 
 @app.route('/admin/create-company', methods=['POST'])
 def create_company():
@@ -365,6 +379,21 @@ def create_company():
 @app.route('/admin/create-company-form')
 def create_company_form():
     return render_template('admin_create_company.html')
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+
+        admin = AdminUser.query.filter_by(email=email).first()
+        if admin and check_password_hash(admin.password_hash, password):
+            session['admin_id'] = admin.id
+            return redirect(url_for('view_own_logs'))
+
+        return 'Invalid credentials', 401
+
+    return render_template('admin_login.html')
 
 
 if __name__ == '__main__':

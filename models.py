@@ -9,7 +9,7 @@ class URLLog(db.Model):
     url = db.Column(db.String(2083))
     prediction_score = db.Column(db.Float)
     verdict = db.Column(db.String(32))
-    timestamp = db.Column(db.DateTime, default=timezone.utc)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'))
 
