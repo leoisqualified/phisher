@@ -335,6 +335,31 @@
       <input type="text" id="apikey-input" placeholder="Enter your API key" />
       <button id="saveApikey">SAVE KEY</button>
       <p id="apikey-status"></p>
+
+      <!-- New Company Creation Link -->
+      <p
+        style="
+          margin-top: 10px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: var(--black);
+        "
+      >
+        Don’t have a company yet?&nbsp;
+        <a
+          href="http://localhost:5000/admin/create-company-form"
+          target="_blank"
+          style="
+            color: var(--black);
+            text-decoration: underline;
+            font-weight: 600;
+          "
+        >
+          Create one here
+        </a>
+      </p>
     </div>
 
     <script src="popup.js"></script>
