@@ -1,5 +1,6 @@
 import joblib
 import logging
+import os
 import pandas as pd
 import requests
 import re
@@ -7,7 +8,8 @@ import secrets
 import torch
 import xgboost as xgb
 from bs4 import BeautifulSoup
-from flask import Flask, request, jsonify, render_template, abort, session, redirect, url_for, check_password_hash
+from flask import Flask, request, jsonify, render_template, abort, session, redirect, url_for
+from werkzeug.security import check_password_hash
 from flask_cors import CORS
 from transformers import BertTokenizer, BertForSequenceClassification
 from urllib.parse import urlparse, parse_qs
@@ -16,6 +18,7 @@ from helpers import login_required
 
 # App initialization
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY") or os.urandom(24)
 CORS(app)
 logging.basicConfig(level=logging.INFO)
 
@@ -265,7 +268,7 @@ def predict():
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # 🔐 Step 1: Authenticate company via API key
+    # Step 1: Authenticate company via API key
     api_key = request.headers.get("X-API-KEY")
     if not api_key:
         return jsonify({"error": "Missing API key"}), 401
@@ -275,20 +278,20 @@ def predict():
         return jsonify({"error": "Invalid API key"}), 403
 
     try:
-        # 🤖 Step 2: Get BERT score
+        # Step 2: Get BERT score
         bert_score = get_bert_prediction(url)
 
-        # 📊 Step 3: Extract features & XGBoost prediction
+        # Step 3: Extract features & XGBoost prediction
         features = extract_all_features(url)
         features_df = pd.DataFrame([features])
         features_df = features_df.reindex(columns=feature_names, fill_value=0)
         xgb_score = xgb_model.predict(xgb.DMatrix(features_df))[0]
 
-        # 🧠 Step 4: Combine scores
+        # Step 4: Combine scores
         final_score = (0.6 * bert_score) + (0.4 * xgb_score)
         verdict = 'phishing' if final_score > 0.5 else 'safe'
 
-        # 📝 Step 5: Log URL to DB with company_id
+        # Step 5: Log URL to DB with company_id
         log = URLLog(
             url=url,
             prediction_score=final_score,
@@ -298,7 +301,7 @@ def predict():
         db.session.add(log)
         db.session.commit()
 
-        # 📤 Step 6: Return result
+        # Step 6: Return result
         return jsonify({
             "url": url,
             "score": float(final_score),
@@ -331,7 +334,6 @@ def add_to_blacklist():
     return jsonify({'message': f'{url} is already blacklisted.'})
 
 # Admin Routes
-
 @app.route('/admin/logs')
 @login_required
 def view_own_logs():
@@ -394,6 +396,33 @@ def admin_login():
         return 'Invalid credentials', 401
 
     return render_template('admin_login.html')
+
+
+@app.route('/company/login', methods=['GET', 'POST'])
+def company_login():
+    if request.method == 'POST':
+        company_name = request.form.get('company_name')
+        api_key = request.form.get('api_key')
+
+        company = Company.query.filter_by(name=company_name, api_key=api_key).first()
+        if company:
+            session['company_id'] = company.id
+            return redirect(url_for('company_dashboard'))  # Adjust to your dashboard route
+
+        return 'Invalid company name or API key', 401
+
+    return render_template('company_login.html')
+
+@app.route('/company/dashboard')
+def company_dashboard():
+    company_id = session.get('company_id')
+    if not company_id:
+        return redirect(url_for('company_login'))
+
+    company = Company.query.get(company_id)
+    logs = URLLog.query.filter_by(company_id=company.id).order_by(URLLog.timestamp.desc()).all()
+
+    return render_template('company_dashboard.html', company=company, logs=logs)
 
 
 if __name__ == '__main__':

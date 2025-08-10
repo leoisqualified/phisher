@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 🔁 Handle automatic feedback from background.js
+  // Handle automatic feedback from background.js
   chrome.runtime.onMessage.addListener((message) => {
     if (message.action === "siteSafe") {
       resultContainer.classList.remove("hidden");
@@ -95,6 +95,7 @@ document.getElementById("saveApikey").addEventListener("click", () => {
       document.getElementById("apikey-status").innerText = "API Key saved!";
       setTimeout(() => {
         document.getElementById("apikey-status").innerText = "";
+        document.querySelector(".apikey-section").classList.add("hidden");
       }, 2000);
     });
   }
@@ -105,6 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.storage.local.get(["companyApiKey"], (result) => {
     if (result.companyApiKey) {
       document.getElementById("apikey-input").value = result.companyApiKey;
+      document.querySelector(".apikey-section").classList.add("hidden");
     }
   });
 });

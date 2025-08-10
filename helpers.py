@@ -1,4 +1,4 @@
-from .models import Company
+from models import Company
 from flask import request, session, redirect, url_for
 from functools import wraps 
 

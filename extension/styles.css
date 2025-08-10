@@ -254,3 +254,7 @@ h1 {
 #apikey-status.success {
   color: #52c41a !important;
 }
+
+.hidden {
+  display: none;
+}
