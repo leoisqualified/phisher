@@ -382,22 +382,6 @@ def create_company():
 def create_company_form():
     return render_template('admin_create_company.html')
 
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-
-        admin = AdminUser.query.filter_by(email=email).first()
-        if admin and check_password_hash(admin.password_hash, password):
-            session['admin_id'] = admin.id
-            return redirect(url_for('view_own_logs'))
-
-        return 'Invalid credentials', 401
-
-    return render_template('admin_login.html')
-
-
 @app.route('/company/login', methods=['GET', 'POST'])
 def company_login():
     if request.method == 'POST':

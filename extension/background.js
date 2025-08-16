@@ -69,7 +69,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// ✅ Auto-scan logic when tabs are updated
+// Auto-scan logic when tabs are updated
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete" || !tab.url) return;
 
@@ -92,22 +92,25 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       .then((data) => {
         console.log("Auto-scan result:", data);
 
-        chrome.tabs.sendMessage(tabId, {
-          action: "autoScanResult",
-          url: tab.url,
-          isPhishing: data.isPhishing,
-        });
-
-        // Set badge
+        // Badge update
         chrome.action.setBadgeText({
           text: data.isPhishing ? "⚠️" : "",
           tabId: tabId,
         });
-
         if (data.isPhishing) {
           chrome.action.setBadgeBackgroundColor({
             color: "#FF0000",
             tabId: tabId,
+          });
+
+          // Open popup ONLY if phishing detected
+          chrome.windows.create({
+            url:
+              chrome.runtime.getURL("popup.html") +
+              `?verdict=phishing&url=${encodeURIComponent(tab.url)}`,
+            type: "popup",
+            width: 400,
+            height: 600,
           });
         }
       })

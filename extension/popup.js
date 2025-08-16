@@ -110,3 +110,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const verdict = params.get("verdict");
+  const url = params.get("url");
+
+  if (verdict === "phishing" && url) {
+    document.getElementById("url-display").textContent = url;
+    document.querySelector("#warning-message").classList.remove("hidden");
+    document.querySelector("#status-display").textContent =
+      "Phishing Detected!";
+    document.getElementById("result").classList.remove("hidden");
+  }
+});
