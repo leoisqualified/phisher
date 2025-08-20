@@ -70,29 +70,77 @@ This project involves developing a **Phishing Detection System** using machine l
 
 ## Results
 
-- **Best Model**: [Specify the model achieving the highest accuracy/F1 score].
+- **Best Model**: Per the previous research work, the XGB was the best classifier model, achieving an accuracy of 98%
 - **Accuracy Achieved**: [Mention the percentage accuracy].
 - **Insights**:
-  - [Key insights derived from the analysis, e.g., "Features such as URL length and SSL certification were highly indicative of phishing websites."]
+  - Features such as URL length and presence of HTTPS protocol were highly indicative of phishing websites.
 
 ---
+
+## System Architecture
+
+- **Machine Learning (ML) Engine:** Evaluates and flags active webpages.
+- **Flask Web App:** Development Environment for the web extension. Includes an admin interface for companies to log in and view url logs and control access.
+- **Database (SQLite):** Stores logs of analyzed URLs, companies, admins, and blacklist entries.
+- **Company API Key System:** Each company gets a secure API key to log phishing events.
+- **Admin Panel:** Allows companies to:
+  - Log in securely
+  - View their own logs (scoped by company_id)
+  - Blacklist suspicious URLs
+  - Create new companies (if superadmin)
+
+## User Roles & Access Control
+
+- **Admin (per company)**
+  - Logs in via `/admin/login`
+  - Views only their company logs via `/admin/logs`
+  - Can blacklist URLs suspicious to their company
+- **API Access**
+  - Companies can use their API Key (`X-API-KEY` header) to interact programmatically with the system.
+
+## Database Models
+
+- Company
+  - `id`, `name`, `api_key`
+- AdminUser
+  - `id`, `email`, `password_hash`, `company_id`
+- URLLog
+  - `id`, `url`, `verdict`,`prediction_score`, `timestamp`, `company_id`
+- Blacklist
+  - `id`, `url`, `reason`
+
+## Routes Overview
+
+### Authentication & Company
+
+- `GET /admin/create-company-form` -> Company creation form
+- `POST /admin/create-company` -> Create a company (superadmin)
+- `POST /company/login` -> Login for admins
+
+### Logs
+- `GET /company/dashboard` -> Company URLLogs
+
+### Blacklist
+- `POST /admin
 
 ## Challenges and Future Work
 
 ### Challenges
 
 - Feature Engineering: Required significant domain knowledge to derive useful features.
+- Most Websites are Javascript protected to prevent scraping and data collection on these websites.
 
 ### Future Work
 
 - Expanding the dataset to include newer phishing patterns.
 - Testing deep learning models for potential performance improvement.
+- Leveraging Intrusive Detection System to allow the extension funtion at the network level.
 
 ---
 
 ## Conclusion
 
-This project demonstrates the effectiveness of machine learning in detecting phishing websites. With proper feature selection and model optimization, the system achieves reliable performance, aiding in cybersecurity efforts.
+This project demonstrates the effectiveness of machine learning in detecting phishing websites. With proper feature selection and model optimization, the system achieves reliable performance, aiding in cybersecurity and fighting against phishing.
 
 ---
 
