@@ -118,10 +118,25 @@ This project involves developing a **Phishing Detection System** using machine l
 - `POST /company/login` -> Login for admins
 
 ### Logs
+
 - `GET /company/dashboard` -> Company URLLogs
 
 ### Blacklist
-- `POST /admin
+
+- `POST /blacklist/add` -> Blacklist a URL (admin only)
+
+### Frontend Templates
+
+- `company_login.html` -> Secure login page for admins
+- `company_dashboard.html` -> Displays phishing logs (company-specific) with blacklist actions.
+- `admin_create_company.html` -> Simple company creation form.
+
+### Security Notes
+
+- Passwords are stored as hashed values using Werkzeug.
+- API keys are randomly generated using Python's `secrets` library.
+- Admins onlly see their company's logs.
+- Blacklisting ensures suspicious URLs can be blocked for future checks.
 
 ## Challenges and Future Work
 
@@ -134,7 +149,9 @@ This project involves developing a **Phishing Detection System** using machine l
 
 - Expanding the dataset to include newer phishing patterns.
 - Testing deep learning models for potential performance improvement.
-- Leveraging Intrusive Detection System to allow the extension funtion at the network level.
+- Leveraging Intrusive Detection System to allow the extension function at the network level.
+- JWT-based API auth (instead of API keys in headers)
+- Emails alerts for blacklisted URLs
 
 ---
 
@@ -146,14 +163,17 @@ This project demonstrates the effectiveness of machine learning in detecting phi
 
 ## How to Run the Project
 
-1. Clone the repository:
+```bash
+# clone repository
+git clone https://github.com/leoisqualified/phisher.git
+cd phisher
 
-   ```bash
-   https://github.com/leoisqualified/Phishing-Detection-Using-Machine-Learning.git
-   ```
-
-2. Install Required Dependencies:
-
-   ```bash
+# install dependencies
    pip install -r requirements.txt
-   ```
+
+# run server
+python3 phisher/app.py
+```
+
+- Apps runs on: `http://127.0.0.1:5000`
+- Admin panel: `http://127.0.0.1:5000/company/login`
