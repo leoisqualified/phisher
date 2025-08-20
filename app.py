@@ -334,22 +334,6 @@ def add_to_blacklist():
     return jsonify({'message': f'{url} is already blacklisted.'})
 
 # Admin Routes
-@app.route('/admin/logs')
-@login_required
-def view_own_logs():
-    admin_id = session.get('admin_id')
-    if not admin_id:
-        return redirect(url_for('admin_login'))
-
-    admin = AdminUser.query.get(admin_id)
-    if not admin:
-        return redirect(url_for('admin_login'))
-
-    logs = URLLog.query.filter_by(company_id=admin.company_id).order_by(URLLog.timestamp.desc()).limit(100).all()
-    company = Company.query.get(admin.company_id)
-
-    return render_template('admin_logs.html', logs=logs, company=company)
-
 @app.route('/admin/create-company', methods=['POST'])
 def create_company():
     data = request.get_json()
