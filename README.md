@@ -142,7 +142,7 @@ This project involves developing a **Web Extension Phishing Detection System** u
 ### Challenges
 
 - Feature Engineering: Required significant domain knowledge to derive useful features.
-- Most Websites are Javascript protected to prevent scraping and data collection on these websites.
+- False Positives: How to reduce false positives to prevent the XGB from incorrectly flagging legitimate websites as phishing.
 
 ### Future Work
 
