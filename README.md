@@ -8,7 +8,7 @@ This project involves developing a **Web Extension Phishing Detection System** u
 
 ## Features and Objectives
 
-- **Objective**: Accurately classify websites as phishing or legitimate using supervised machine learning.
+- **Objective**: Accurately classify websites as phishing or legitimate using supervised machine learning **in real time**.
 - **Key Features**:
   - Extraction of URL-based, content-based, and domain-based features.
   - Implementation of multiple machine learning models to achieve optimal performance.
