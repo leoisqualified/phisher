@@ -1,8 +1,8 @@
-# Phishing Detection System Using Machine Learning
+# Web Extension Phishing Detection System Using Machine Learning
 
 ## Project Overview
 
-This project involves developing a **Phishing Detection System** using machine learning techniques. Phishing is a fraudulent attempt to obtain sensitive information, and detecting it effectively is crucial to protect users online. By leveraging Python and its powerful libraries, we analyze web-based data to identify phishing websites.
+This project involves developing a **Web Extension Phishing Detection System** using machine learning techniques. Phishing is a fraudulent attempt to obtain sensitive information, and detecting it effectively is crucial to protect users online. By leveraging Python and its powerful libraries, we analyze web-based data to identify phishing websites.
 
 ---
 
@@ -27,8 +27,8 @@ This project involves developing a **Phishing Detection System** using machine l
 
 ## Dataset
 
-- **Source**: [Mention the dataset source or URL if publicly available].
-- **Structure**: The dataset contains features such as URL length, presence of special characters, domain age, SSL certificate details, and a target label indicating whether the website is phishing (1) or legitimate (0).
+- **Source**: [Click this Link](https://www.kaggle.com/datasets/shashwatwork/phishing-dataset-for-machine-learning).
+- **Structure**: The dataset contains features such as NumDots,SubdomainLevel,PathLevel,UrlLength,NumDash,NumDashInHostname,AtSymbol,TildeSymbol,NumUnderscore,NumPercent,NumQueryComponents,NumAmpersand,NumHash,NumNumericChars,NoHttps,RandomString,IpAddress,DomainInSubdomains,DomainInPaths,HttpsInHostname,HostnameLength among others, and a target label indicating whether the website is phishing (1) or legitimate (0).
 
 ---
 
@@ -48,13 +48,12 @@ This project involves developing a **Phishing Detection System** using machine l
 
 ### 3. Model Selection
 
-- **Algorithms Used**:
+- **Algorithms and Models Used**:
   - Gradient Boosting (XGBoost)
   - BERT
 - **Evaluation Metrics**:
   - Accuracy
   - Precision, Recall, and F1 Score
-  - ROC-AUC Score
 
 ### 4. Training and Testing
 
