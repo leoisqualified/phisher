@@ -70,7 +70,7 @@ This project involves developing a **Web Extension Phishing Detection System** u
 ## Results
 
 - **Best Model**: Per the previous research work, the XGB was the best classifier model, achieving an accuracy of 98%
-- **Accuracy Achieved**: [Mention the percentage accuracy].
+- **Accuracy Achieved**: The model achieved an accuracy of 98% which is a good indicator that the model has recognized patterns in the dataset without overfitting.
 - **Insights**:
   - Features such as URL length and presence of HTTPS protocol were highly indicative of phishing websites.
 
@@ -91,8 +91,8 @@ This project involves developing a **Web Extension Phishing Detection System** u
 ## User Roles & Access Control
 
 - **Admin (per company)**
-  - Logs in via `/admin/login`
-  - Views only their company logs via `/admin/logs`
+  - Logs in via `/company/login`
+  - Views only their company logs via `/company/dashboard`
   - Can blacklist URLs suspicious to their company
 - **API Access**
   - Companies can use their API Key (`X-API-KEY` header) to interact programmatically with the system.
@@ -134,7 +134,7 @@ This project involves developing a **Web Extension Phishing Detection System** u
 
 - Passwords are stored as hashed values using Werkzeug.
 - API keys are randomly generated using Python's `secrets` library.
-- Admins onlly see their company's logs.
+- Admins only see their company's logs.
 - Blacklisting ensures suspicious URLs can be blocked for future checks.
 
 ## Challenges and Future Work
