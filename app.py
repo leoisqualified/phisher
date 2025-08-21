@@ -16,6 +16,8 @@ from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
 from helpers import login_required 
 
+# 98f6ad5b9495d9d242511b0e65697af558b0e75685386896f8a2ed6ccca381e5
+
 # App initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY") or os.urandom(24)
@@ -289,7 +291,7 @@ def predict():
 
         # Step 4: Combine scores
         final_score = (0.6 * bert_score) + (0.4 * xgb_score)
-        verdict = 'phishing' if final_score > 0.5 else 'safe'
+        verdict = 'phishing' if final_score > 0.65 else 'safe'
 
         # Step 5: Log URL to DB with company_id
         log = URLLog(
