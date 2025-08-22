@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 db = SQLAlchemy()
 
+
 class URLLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(2083))
@@ -11,13 +12,15 @@ class URLLog(db.Model):
     verdict = db.Column(db.String(32))
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'))
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"))
+
 
 class Blacklist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"), nullable=False)
     url = db.Column(db.String(2048))
     reason = db.Column(db.String(128))
+
 
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -26,11 +29,11 @@ class Company(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # One-to-many: a company has many URL logs
-    url_logs = db.relationship('URLLog', backref='company', lazy=True)
+    url_logs = db.relationship("URLLog", backref="company", lazy=True)
 
 
 class AdminUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"), nullable=False)
     email = db.Column(db.String(128), unique=True)
     password_hash = db.Column(db.String(128))

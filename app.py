@@ -1,35 +1,47 @@
-import joblib
 import logging
 import os
-import pandas as pd
-import requests
 import re
 import secrets
+from urllib.parse import parse_qs, urlparse
+
+import joblib
+import pandas as pd
+import requests
 import torch
 import xgboost as xgb
 from bs4 import BeautifulSoup
-from flask import Flask, request, jsonify, render_template, abort, session, redirect, url_for
-from werkzeug.security import check_password_hash
+from flask import (
+    Flask,
+    abort,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_cors import CORS
-from transformers import BertTokenizer, BertForSequenceClassification
-from urllib.parse import urlparse, parse_qs
 from playwright.sync_api import sync_playwright
-from helpers import login_required 
+from transformers import BertForSequenceClassification, BertTokenizer
+
+from helpers import login_required
+from models import Blacklist, Company, URLLog, db
 
 # 98f6ad5b9495d9d242511b0e65697af558b0e75685386896f8a2ed6ccca381e5
 
 # App initialization
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY") or os.urandom(24)
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or os.urandom(24)
 CORS(app)
 logging.basicConfig(level=logging.INFO)
 
 # Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///phishing_logs.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # (optional, but good practice)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///phishing_logs.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # (optional, but good practice)
 
 # Import models app
-from models import db, URLLog, Blacklist, Company, AdminUser
+
+
 db.init_app(app)
 
 # Ensure tables are created inside app context
@@ -49,12 +61,29 @@ feature_names = joblib.load("feature_names.joblib")
 
 # === Constants ===
 SENSITIVE_WORDS = [
-    "secure", "account", "webscr", "login", "signin", "banking", "confirm",
-    "password", "update", "verify", "security", "ebayisapi", "paypal"
+    "secure",
+    "account",
+    "webscr",
+    "login",
+    "signin",
+    "banking",
+    "confirm",
+    "password",
+    "update",
+    "verify",
+    "security",
+    "ebayisapi",
+    "paypal",
 ]
 
 BRAND_NAMES = [
-    "paypal", "google", "facebook", "apple", "amazon", "microsoft", "bankofamerica"
+    "paypal",
+    "google",
+    "facebook",
+    "apple",
+    "amazon",
+    "microsoft",
+    "bankofamerica",
 ]
 
 SAFE_DOMAINS = ["chatgpt.com", "openai.com", "google.com", "microsoft.com"]
@@ -82,7 +111,7 @@ def fetch_soup(url):
         response = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(response.text, "html.parser")
         title = soup.title.string.strip() if soup.title and soup.title.string else ""
-        text_snippet = soup.get_text(separator=' ', strip=True)[:500]
+        text_snippet = soup.get_text(separator=" ", strip=True)[:500]
 
         if "enable javascript" in text_snippet.lower() or not title:
             raise ValueError("Content appears JS-protected. Triggering fallback...")
@@ -103,7 +132,7 @@ def extract_string_features(url):
         "NumUnderscore": url.count("_"),
         "NumNumericChars": sum(c.isdigit() for c in url),
         "NoHttps": int(not url.startswith("https://")),
-        "IpAddress": int(bool(re.match(r'\b\d{1,3}(\.\d{1,3}){3}\b', hostname)))
+        "IpAddress": int(bool(re.match(r"\b\d{1,3}(\.\d{1,3}){3}\b", hostname))),
     }
 
 
@@ -135,7 +164,7 @@ def extract_additional_url_features(url):
         "QueryLength": len(query),
         "DoubleSlashInPath": int("//" in path),
         "NumSensitiveWords": sum(word in url.lower() for word in SENSITIVE_WORDS),
-        "EmbeddedBrandName": sum(brand in url.lower() for brand in BRAND_NAMES)
+        "EmbeddedBrandName": sum(brand in url.lower() for brand in BRAND_NAMES),
     }
 
 
@@ -145,8 +174,12 @@ def extract_content_features(soup, url):
         features["MissingTitle"] = int(not soup.title)
 
         forms = soup.find_all("form")
-        features["InsecureForms"] = sum(1 for f in forms if f.get("action", "").startswith("http://"))
-        features["RelativeFormAction"] = sum(1 for f in forms if f.get("action", "").startswith("/"))
+        features["InsecureForms"] = sum(
+            1 for f in forms if f.get("action", "").startswith("http://")
+        )
+        features["RelativeFormAction"] = sum(
+            1 for f in forms if f.get("action", "").startswith("/")
+        )
 
         all_links = soup.find_all("a", href=True)
         ext_links = [a for a in all_links if urlparse(a["href"]).netloc not in url]
@@ -162,9 +195,17 @@ def extract_runtime_features(soup):
     features = {}
     try:
         scripts = soup.find_all("script")
-        features["RightClickDisabled"] = any("oncontextmenu" in script.text.lower() for script in scripts)
-        features["FakeLinkInStatusBar"] = sum(1 for a in soup.find_all("a", href=True) if "javascript:" in a["href"].lower())
-        features["PopUpWindow"] = sum(1 for s in scripts if "window.open" in s.text.lower())
+        features["RightClickDisabled"] = any(
+            "oncontextmenu" in script.text.lower() for script in scripts
+        )
+        features["FakeLinkInStatusBar"] = sum(
+            1
+            for a in soup.find_all("a", href=True)
+            if "javascript:" in a["href"].lower()
+        )
+        features["PopUpWindow"] = sum(
+            1 for s in scripts if "window.open" in s.text.lower()
+        )
     except Exception as e:
         logging.warning(f"[Runtime Features] Error: {e}")
     return features
@@ -175,13 +216,17 @@ def extract_extended_content_features(soup, url):
     try:
         # External resource URLs
         tags = soup.find_all(["script", "img", "link"])
-        urls = [t.get("src") or t.get("href") for t in tags if t.get("src") or t.get("href")]
+        urls = [
+            t.get("src") or t.get("href") for t in tags if t.get("src") or t.get("href")
+        ]
         ext = [u for u in urls if urlparse(u).netloc and urlparse(u).netloc not in url]
         features["PctExtResourceUrls"] = len(ext) / max(1, len(urls))
 
         # External favicon
         favicons = soup.find_all("link", rel=lambda val: val and "icon" in val.lower())
-        features["ExtFavicon"] = int(any(urlparse(f.get("href", "")).netloc not in url for f in favicons))
+        features["ExtFavicon"] = int(
+            any(urlparse(f.get("href", "")).netloc not in url for f in favicons)
+        )
 
         # Form behavior
         forms = soup.find_all("form")
@@ -195,7 +240,11 @@ def extract_extended_content_features(soup, url):
                 nulls += 1
             if action == "" or action.startswith("javascript"):
                 abnormal += 1
-            if action and urlparse(action).netloc and urlparse(action).netloc not in url:
+            if (
+                action
+                and urlparse(action).netloc
+                and urlparse(action).netloc not in url
+            ):
                 ext_forms += 1
             if f.find_all("img") and not f.find_all(["input", "textarea", "select"]):
                 image_only += 1
@@ -209,7 +258,9 @@ def extract_extended_content_features(soup, url):
         # FrequentDomainNameMismatch
         all_links = soup.find_all("a", href=True)
         page_domain = urlparse(url).netloc
-        mismatches = sum(1 for a in all_links if urlparse(a["href"]).netloc not in [page_domain, ""])
+        mismatches = sum(
+            1 for a in all_links if urlparse(a["href"]).netloc not in [page_domain, ""]
+        )
         features["FrequentDomainNameMismatch"] = mismatches / max(1, len(all_links))
     except Exception as e:
         logging.warning(f"[Extended Content Features] Error: {e}")
@@ -256,17 +307,19 @@ def is_safe_domain(url):
     domain = urlparse(url).netloc
     return any(safe in domain for safe in SAFE_DOMAINS)
 
+
 # ============ ROUTES ============
 # Home Route
-@app.route('/')
+@app.route("/")
 def home():
     return "Phishing Detection API is running."
 
+
 # Predict Route
-@app.route('/predict', methods=['POST'])
+@app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json()
-    url = data.get('url')
+    url = data.get("url")
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
@@ -291,31 +344,28 @@ def predict():
 
         # Step 4: Combine scores
         final_score = (0.6 * bert_score) + (0.4 * xgb_score)
-        verdict = 'phishing' if final_score > 0.65 else 'safe'
+        verdict = "phishing" if final_score > 0.65 else "safe"
 
         # Step 5: Log URL to DB with company_id
         log = URLLog(
             url=url,
             prediction_score=final_score,
             verdict=verdict,
-            company_id=company.id
+            company_id=company.id,
         )
         db.session.add(log)
         db.session.commit()
 
         # Step 6: Return result
-        return jsonify({
-            "url": url,
-            "score": float(final_score),
-            "verdict": verdict
-        })
+        return jsonify({"url": url, "score": float(final_score), "verdict": verdict})
 
     except Exception as e:
         logging.error(f"Error during prediction: {e}")
         return jsonify({"error": "An error occurred during prediction"}), 500
 
+
 def get_company_from_request():
-    api_key = request.headers.get('X-API-KEY')
+    api_key = request.headers.get("X-API-KEY")
     if not api_key:
         abort(401, description="Missing API Key")
     company = Company.query.filter_by(api_key=api_key).first()
@@ -323,31 +373,33 @@ def get_company_from_request():
         abort(403, description="Invalid API Key")
     return company
 
+
 # Black List Routes
-@app.route('/blacklist/add', methods=['POST'])
+@app.route("/blacklist/add", methods=["POST"])
 @login_required
 def add_to_blacklist():
-    url = request.json['url']
-    reason = request.json.get('reason', 'manual')
+    url = request.json["url"]
+    reason = request.json.get("reason", "manual")
     if not Blacklist.query.filter_by(url=url).first():
         db.session.add(Blacklist(url=url, reason=reason))
         db.session.commit()
-        return jsonify({'message': f'{url} successfully blacklisted.'})
-    return jsonify({'message': f'{url} is already blacklisted.'})
+        return jsonify({"message": f"{url} successfully blacklisted."})
+    return jsonify({"message": f"{url} is already blacklisted."})
+
 
 # Admin Routes
-@app.route('/admin/create-company', methods=['POST'])
+@app.route("/admin/create-company", methods=["POST"])
 def create_company():
     data = request.get_json()
-    company_name = data.get('name')
+    company_name = data.get("name")
 
     if not company_name:
-        return jsonify({'error': 'Company name is required'}), 400
+        return jsonify({"error": "Company name is required"}), 400
 
     # Check if the company already exists
     existing = Company.query.filter_by(name=company_name).first()
     if existing:
-        return jsonify({'error': 'Company already exists'}), 400
+        return jsonify({"error": "Company already exists"}), 400
 
     # Generate a secure API key
     api_key = secrets.token_hex(32)
@@ -356,44 +408,52 @@ def create_company():
     db.session.add(new_company)
     db.session.commit()
 
-    return jsonify({
-        'message': 'Company created successfully',
-        'company': {
-            'name': company_name,
-            'api_key': api_key
+    return jsonify(
+        {
+            "message": "Company created successfully",
+            "company": {"name": company_name, "api_key": api_key},
         }
-    }), 201
+    ), 201
 
-@app.route('/admin/create-company-form')
+
+@app.route("/admin/create-company-form")
 def create_company_form():
-    return render_template('admin_create_company.html')
+    return render_template("admin_create_company.html")
 
-@app.route('/company/login', methods=['GET', 'POST'])
+
+@app.route("/company/login", methods=["GET", "POST"])
 def company_login():
-    if request.method == 'POST':
-        company_name = request.form.get('company_name')
-        api_key = request.form.get('api_key')
+    if request.method == "POST":
+        company_name = request.form.get("company_name")
+        api_key = request.form.get("api_key")
 
         company = Company.query.filter_by(name=company_name, api_key=api_key).first()
         if company:
-            session['company_id'] = company.id
-            return redirect(url_for('company_dashboard'))  # Adjust to your dashboard route
+            session["company_id"] = company.id
+            return redirect(
+                url_for("company_dashboard")
+            )  # Adjust to your dashboard route
 
-        return 'Invalid company name or API key', 401
+        return "Invalid company name or API key", 401
 
-    return render_template('company_login.html')
+    return render_template("company_login.html")
 
-@app.route('/company/dashboard')
+
+@app.route("/company/dashboard")
 def company_dashboard():
-    company_id = session.get('company_id')
+    company_id = session.get("company_id")
     if not company_id:
-        return redirect(url_for('company_login'))
+        return redirect(url_for("company_login"))
 
     company = Company.query.get(company_id)
-    logs = URLLog.query.filter_by(company_id=company.id).order_by(URLLog.timestamp.desc()).all()
+    logs = (
+        URLLog.query.filter_by(company_id=company.id)
+        .order_by(URLLog.timestamp.desc())
+        .all()
+    )
 
-    return render_template('company_dashboard.html', company=company, logs=logs)
+    return render_template("company_dashboard.html", company=company, logs=logs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
