@@ -357,7 +357,7 @@ def predict():
         db.session.commit()
 
         # Step 6: Return result
-        return jsonify({"url": url, "score": float(final_score), "verdict": verdict})
+        return jsonify({"url": url, "score": float(final_score), "verdict": verdict, "isPhishing": verdict == "phishing"})
 
     except Exception as e:
         logging.error(f"Error during prediction: {e}")
