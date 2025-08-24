@@ -1,17 +1,25 @@
-﻿Hybrid Phishing Website Detection Using XGBoost and BERT-based URL and DOM Analysis
+﻿Phishing Website Detection Using Hybrid Approach: XGBoost DOM Analysis and BERT URL Analysis
 
 Abstract
-Phishing attacks are among the most pervasive cybersecurity threats today, exploiting users by imitating legitimate websites. This paper presents a hybrid approach to phishing detection via a browser extension that combines machine learning (XGBoost) and deep learning (BERT) techniques. The proposed method leverages BERT for semantic URL analysis and XGBoost for structural webpage analysis using features extracted from the DOM via BeautifulSoup. Our model demonstrates enhanced detection accuracy through feature-level fusion of URL and page content data. This work extends existing efforts in phishing detection by integrating semantic and structural signals in a real-time browser environment.
+Phishing attacks are among the most pervasive cybersecurity threats today, exploiting users by imitating legitimate websites. This paper presents a hybrid approach to phishing detection via a browser extension that combines machine learning (XGBoost) and deep learning (BERT) techniques. The proposed method leverages BERT for semantic URL analysis and XGBoost for structural webpage analysis using features extracted from the DOM via BeautifulSoup and Chrome Selenium. Our model demonstrates enhanced detection accuracy through feature-level fusion of URL and page content data. This work extends existing efforts in phishing detection by integrating semantic and structural signals in a real-time browser environment.
 
 1. Introduction
 Phishing attacks trick users into divulging sensitive information by mimicking trustworthy websites. As phishing tactics evolve, traditional blacklist-based and rule-based systems struggle to keep up. Recent advances in machine learning have shown promise in automating phishing detection, especially through URL analysis and HTML content inspection.
 
-This research proposes a novel system combining a pre-trained variant of BERT for URL analysis and XGBoost for DOM-based feature classification. The model is integrated into a browser extension, enabling real-time protection against phishing sites.
+This research proposes a novel system combining a pretrained variant of BERT, ealvaradob/bert-finetuned-phishing, from HuggingFace, for URL analysis and XGBoost for DOM-based feature classification. The model is integrated into a browser extension, enabling real-time protection against phishing sites.
 
 2. Related Work
-Numerous studies have explored machine learning methods for phishing detection. URL-based detection techniques rely on features such as domain length, use of special characters, and presence of IP addresses. The paper by Rathore and Kaur presents a comprehensive review of such methods, highlighting decision trees, SVMs, and ensemble methods like XGBoost for effective detection .
+    • DOM Analysis
+Numerous studies have explored machine learning methods for phishing detection. The paper by Praveen N. et al. (2024): Real Time Phishing Website Detection using ML presents a comprehensive review of such methods, highlighting decision trees, SVMs, and ensemble methods like XGBoost for effective feature based identification and detection. 
+ 
+With DOM Analysis, web pages would have to be scraped for HTML features such as forms tags, buttons, images, form action among others and parsed into a dataframe that matches the format of the dataset that the classifier was trained on.
 
-However, URL-only approaches may fail against cleverly crafted URLs. Some recent efforts incorporate webpage content analysis, often using scraping tools like BeautifulSoup. Yet, few combine semantic analysis with structural inspection, which is the gap this work addresses.
+    • URL Analysis
+Phishing Detection using Machine Learning based URL Analysis: A Survey, the work of Arathi V. Krishna et al.,  provided in accurate detail what URL based detection techniques rely on. Features such as domain length, use of special characters, and presence of IP addresses, NumDots, SubdomainLevel, PathLevel, UrlLength, NumDash, NumDashInHostname, AtSymbol, TildeSymbol, NumUnderscore, NumPercent, NumQueryComponents, NumAmpersand, NumHash, NumNumericChars, NoHttps, RandomString, IpAddress, DomainInSubdomains, DomainInPaths, HttpsInHostname, HostnameLength, PathLength, QueryLength, etc and how to leverage Natural Language Processing (NLP) and semantic analysis to 
+
+However, URL-only approaches may fail against cleverly crafted URLs. Some recent efforts incorporate webpage content analysis, often using scraping tools like BeautifulSoup. Yet, few combine semantic analysis with structural inspection, which is the gap this work addresses. 
+
+ 
 
 3. Extended Literature Insights and Emerging Techniques
 While traditional phishing detection methods focus primarily on static URL features or DOM-based inspection, recent research has expanded the field to incorporate deep learning models, real-time adaptation, and hybrid intelligence. A 2024 study by Praveen et al. [2], titled Real Time Phishing Website Detection using ML, offers key advancements that complement and extend the methodologies discussed in earlier surveys such as Rathore and Kaur [1].
@@ -43,5 +51,5 @@ The combined model significantly outperformed individual approaches, validating 
 We presented a hybrid phishing detection approach that unifies semantic URL interpretation and structural webpage inspection. This model, deployed within a browser extension, demonstrates robust performance in detecting phishing attempts in real time. Future work includes extending the model to detect sophisticated social engineering techniques embedded in webpage content.
 
 References
-Rathore, M., & Kaur, R. (2021). Phishing Detection Using Machine Learning Based URL Analysis: A Survey. IJERTCONV9IS13033. [PDF uploaded]
+Rathore, M., & Kaur, R. (2021). Phishing Detection Using Machine Learning Based URL Analysis: A Survey. IJERTCONV9IS13033.
 Praveen, B. S., Shivakumar, M., & Rajesh, R. (2024). Real Time Phishing Website Detection using ML. IJISRT24DEC281.
