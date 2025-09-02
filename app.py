@@ -23,7 +23,6 @@ from flask_cors import CORS
 from playwright.sync_api import sync_playwright
 from transformers import BertForSequenceClassification, BertTokenizer
 
-from helpers import login_required
 from models import Blacklist, Company, URLLog, db
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -351,12 +350,14 @@ def predict():
         db.session.add(log)
         db.session.commit()
 
-        return jsonify({
-            "url": url,
-            "score": float(final_score),
-            "verdict": verdict,
-            "isPhishing": verdict == "phishing"
-        })
+        return jsonify(
+            {
+                "url": url,
+                "score": float(final_score),
+                "verdict": verdict,
+                "isPhishing": verdict == "phishing",
+            }
+        )
 
     except Exception as e:
         logging.error(f"Error during prediction: {e}")
@@ -399,8 +400,6 @@ def add_to_blacklist():
     db.session.commit()
 
     return jsonify({"message": f"{url} successfully blacklisted for {company.name}."})
-
-
 
 
 # Admin Routes
@@ -452,7 +451,6 @@ def company_login():
         return "Invalid credentials", 401
 
     return render_template("company_login.html")
-
 
 
 @app.route("/company/dashboard")
