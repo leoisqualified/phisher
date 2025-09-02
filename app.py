@@ -323,30 +323,25 @@ def predict():
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # Step 1: Authenticate company via API key
-    api_key = request.headers.get("X-API-KEY")
-    if not api_key:
-        return jsonify({"error": "Missing API key"}), 401
+    # Get caller’s IP
+    client_ip = request.remote_addr
 
-    company = Company.query.filter_by(api_key=api_key).first()
+    # Find company by IP
+    company = Company.query.filter(Company.registered_ips.contains(client_ip)).first()
     if not company:
-        return jsonify({"error": "Invalid API key"}), 403
+        return jsonify({"error": "Unregistered network"}), 403
 
     try:
-        # Step 2: Get BERT score
         bert_score = get_bert_prediction(url)
 
-        # Step 3: Extract features & XGBoost prediction
         features = extract_all_features(url)
         features_df = pd.DataFrame([features])
         features_df = features_df.reindex(columns=feature_names, fill_value=0)
         xgb_score = xgb_model.predict(xgb.DMatrix(features_df))[0]
 
-        # Step 4: Combine scores
         final_score = (0.6 * bert_score) + (0.4 * xgb_score)
         verdict = "phishing" if final_score > 0.65 else "safe"
 
-        # Step 5: Log URL to DB with company_id
         log = URLLog(
             url=url,
             prediction_score=final_score,
@@ -356,8 +351,12 @@ def predict():
         db.session.add(log)
         db.session.commit()
 
-        # Step 6: Return result
-        return jsonify({"url": url, "score": float(final_score), "verdict": verdict, "isPhishing": verdict == "phishing"})
+        return jsonify({
+            "url": url,
+            "score": float(final_score),
+            "verdict": verdict,
+            "isPhishing": verdict == "phishing"
+        })
 
     except Exception as e:
         logging.error(f"Error during prediction: {e}")

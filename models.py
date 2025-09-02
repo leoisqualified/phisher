@@ -28,8 +28,11 @@ class Company(db.Model):
     api_key = db.Column(db.String(64), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # One-to-many: a company has many URL logs
+    # NEW: register which IPs belong to this company
+    registered_ips = db.Column(db.Text)  # could store CSV of IPs or use separate table
+
     url_logs = db.relationship("URLLog", backref="company", lazy=True)
+
 
 
 class AdminUser(db.Model):
