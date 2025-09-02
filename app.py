@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import secrets
 from urllib.parse import parse_qs, urlparse
 
 import joblib
@@ -26,6 +25,7 @@ from transformers import BertForSequenceClassification, BertTokenizer
 
 from helpers import login_required
 from models import Blacklist, Company, URLLog, db
+from werkzeug.security import check_password_hash, generate_password_hash
 
 # 98f6ad5b9495d9d242511b0e65697af558b0e75685386896f8a2ed6ccca381e5
 
@@ -375,15 +375,32 @@ def get_company_from_request():
 
 # Black List Routes
 @app.route("/blacklist/add", methods=["POST"])
-@login_required
 def add_to_blacklist():
-    url = request.json["url"]
+    url = request.json.get("url")
     reason = request.json.get("reason", "manual")
-    if not Blacklist.query.filter_by(url=url).first():
-        db.session.add(Blacklist(url=url, reason=reason))
-        db.session.commit()
-        return jsonify({"message": f"{url} successfully blacklisted."})
-    return jsonify({"message": f"{url} is already blacklisted."})
+
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+
+    # Identify company based on client IP
+    client_ip = request.remote_addr
+    company = Company.query.filter(Company.registered_ips.contains(client_ip)).first()
+
+    if not company:
+        return jsonify({"error": "Unregistered network"}), 403
+
+    # Check if already blacklisted for this company
+    existing = Blacklist.query.filter_by(company_id=company.id, url=url).first()
+    if existing:
+        return jsonify({"message": f"{url} is already blacklisted for {company.name}."})
+
+    # Add to blacklist
+    db.session.add(Blacklist(company_id=company.id, url=url, reason=reason))
+    db.session.commit()
+
+    return jsonify({"message": f"{url} successfully blacklisted for {company.name}."})
+
+
 
 
 # Admin Routes
@@ -391,26 +408,27 @@ def add_to_blacklist():
 def create_company():
     data = request.get_json()
     company_name = data.get("name")
+    password = data.get("password")
 
-    if not company_name:
-        return jsonify({"error": "Company name is required"}), 400
+    if not company_name or not password:
+        return jsonify({"error": "Company name and password are required"}), 400
 
     # Check if the company already exists
     existing = Company.query.filter_by(name=company_name).first()
     if existing:
         return jsonify({"error": "Company already exists"}), 400
 
-    # Generate a secure API key
-    api_key = secrets.token_hex(32)
+    # Hash the password
+    password_hash = generate_password_hash(password)
 
-    new_company = Company(name=company_name, api_key=api_key)
+    new_company = Company(name=company_name, password_hash=password_hash)
     db.session.add(new_company)
     db.session.commit()
 
     return jsonify(
         {
             "message": "Company created successfully",
-            "company": {"name": company_name, "api_key": api_key},
+            "company": {"name": company_name},
         }
     ), 201
 
@@ -424,18 +442,17 @@ def create_company_form():
 def company_login():
     if request.method == "POST":
         company_name = request.form.get("company_name")
-        api_key = request.form.get("api_key")
+        password = request.form.get("password")
 
-        company = Company.query.filter_by(name=company_name, api_key=api_key).first()
-        if company:
+        company = Company.query.filter_by(name=company_name).first()
+        if company and check_password_hash(company.password_hash, password):
             session["company_id"] = company.id
-            return redirect(
-                url_for("company_dashboard")
-            )  # Adjust to your dashboard route
+            return redirect(url_for("company_dashboard"))
 
-        return "Invalid company name or API key", 401
+        return "Invalid credentials", 401
 
     return render_template("company_login.html")
+
 
 
 @app.route("/company/dashboard")
@@ -455,4 +472,4 @@ def company_dashboard():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

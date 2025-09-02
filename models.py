@@ -24,14 +24,13 @@ class Blacklist(db.Model):
 
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    api_key = db.Column(db.String(64), unique=True, nullable=False)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    password_hash = db.Column(db.String(128), nullable=False) 
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    # NEW: register which IPs belong to this company
-    registered_ips = db.Column(db.Text)  # could store CSV of IPs or use separate table
-
+    registered_ips = db.Column(db.Text)
     url_logs = db.relationship("URLLog", backref="company", lazy=True)
+
 
 
 

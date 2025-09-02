@@ -1,7 +1,7 @@
 import requests
 from dnslib import DNSRecord, QTYPE, RR, A, server
 
-API_URL = "http://your-flask-api:5000/predict"
+API_URL = "http://localhost:5000/predict"
 UPSTREAM_DNS = "1.1.1.1"  # Cloudflare fallback
 
 class PhishingDNSHandler:
