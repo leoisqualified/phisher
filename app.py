@@ -301,8 +301,15 @@ def get_bert_prediction(url):
 
 # === Domain Check ===
 def is_safe_domain(url):
-    domain = urlparse(url).netloc
-    return any(safe in domain for safe in SAFE_DOMAINS)
+    try:
+        hostname = urlparse(url).hostname or ""
+        hostname = hostname.lower()
+        return any(
+            hostname == safe or hostname.endswith("." + safe)
+            for safe in SAFE_DOMAINS
+        )
+    except Exception:
+        return False
 
 
 # ============ ROUTES ============
@@ -321,16 +328,23 @@ def predict():
         return jsonify({"error": "No URL provided"}), 400
 
     try:
-        bert_score = get_bert_prediction(url)
-        features = extract_all_features(url)
-        features_df = pd.DataFrame([features]).reindex(
-            columns=feature_names, fill_value=0
-        )
-        xgb_score = xgb_model.predict(xgb.DMatrix(features_df))[0]
+        # --- Step 1: Safe domain whitelist ---
+        if is_safe_domain(url):
+            verdict = "safe"
+            final_score = 0.0
+        else:
+            # --- Step 2: Run ML models ---
+            bert_score = get_bert_prediction(url)
+            features = extract_all_features(url)
+            features_df = pd.DataFrame([features]).reindex(
+                columns=feature_names, fill_value=0
+            )
+            xgb_score = xgb_model.predict(xgb.DMatrix(features_df))[0]
 
-        final_score = (0.6 * bert_score) + (0.4 * xgb_score)
-        verdict = "phishing" if final_score > 0.65 else "safe"
+            final_score = (0.6 * bert_score) + (0.4 * xgb_score)
+            verdict = "phishing" if final_score > 0.65 else "safe"
 
+        # --- Step 3: Log result ---
         log = URLLog(
             url=url,
             prediction_score=final_score,
