@@ -295,15 +295,20 @@
 
           if (res.ok) {
             responseDiv.innerHTML = `
-                        <strong>COMPANY SUCCESSFULLY CREATED</strong>
-                        <div style="margin-top: 1rem;"><strong>Name:</strong> ${data.company.name}</div>
-                        <div style="margin-top: 1rem;"><strong>API Key:</strong></div>
-                        <div class="api-key">${data.company.api_key}</div>
-                        <button class="copy-btn" onclick="navigator.clipboard.writeText('${data.company.api_key}')">Copy API Key</button>
-                        <div class="note">
-                            Please store this API key securely. You won't be able to see it again.
-                        </div>
-                    `;
+              <strong>COMPANY SUCCESSFULLY CREATED</strong>
+              <div style="margin-top: 1rem;"><strong>Name:</strong> ${data.company.name}</div>
+              <div style="margin-top: 1rem;"><strong>API Key:</strong></div>
+              <div class="api-key">${data.company.api_key}</div>
+              <button class="copy-btn" onclick="
+                navigator.clipboard.writeText('${data.company.api_key}').then(() => {
+                  this.textContent = 'Copied!';
+                  setTimeout(() => this.textContent = 'Copy API Key', 2000);
+                });
+              ">Copy API Key</button>
+              <div class="note">
+                Please store this API key securely. You won't be able to see it again.
+              </div>
+            `;
           } else {
             responseDiv.innerHTML = `
                         <strong>ERROR CREATING COMPANY</strong>
