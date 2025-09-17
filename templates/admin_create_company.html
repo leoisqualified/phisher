@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Create New Company</title>
+    <title>Create New Account</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
@@ -210,17 +210,17 @@
   </head>
   <body>
     <div class="container">
-      <h1>Create New Company</h1>
+      <h1>Create New Account</h1>
 
       <form id="companyForm">
         <div class="form-group">
-          <label for="name">Company Name</label>
+          <label for="name">Account Name</label>
           <input
             type="text"
             id="name"
             name="name"
             required
-            placeholder="Enter company name"
+            placeholder="Enter Account name"
           />
 
           <!-- <label for="password">Password</label>
@@ -235,7 +235,7 @@
 
         <button type="submit" id="submitBtn">
           <span id="btnLoader" class="loading" style="display: none"></span>
-          <span id="btnText">Create Company</span>
+          <span id="btnText">Create Account</span>
         </button>
       </form>
 
@@ -252,7 +252,7 @@
           color: var(--black);
         "
       >
-        Already have a company?&nbsp;
+        Already have a account?&nbsp;
         <a
           href="/company/login"
           style="
@@ -295,7 +295,7 @@
 
           if (res.ok) {
             responseDiv.innerHTML = `
-              <strong>COMPANY SUCCESSFULLY CREATED</strong>
+              <strong>ACCOUNT SUCCESSFULLY CREATED</strong>
               <div style="margin-top: 1rem;"><strong>Name:</strong> ${data.company.name}</div>
               <div style="margin-top: 1rem;"><strong>API Key:</strong></div>
               <div class="api-key">${data.company.api_key}</div>
@@ -311,7 +311,7 @@
             `;
           } else {
             responseDiv.innerHTML = `
-                        <strong>ERROR CREATING COMPANY</strong>
+                        <strong>ERROR CREATING Account</strong>
                         <div style="margin-top: 1rem;">${
                           data.error ||
                           "An unexpected error occurred. Please try again."
