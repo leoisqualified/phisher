@@ -2,10 +2,10 @@ import logging
 import os
 import re
 from urllib.parse import parse_qs, urlparse
-
 import joblib
 import pandas as pd
 import requests
+import secrets
 import torch
 import xgboost as xgb
 from bs4 import BeautifulSoup
@@ -24,9 +24,9 @@ from playwright.sync_api import sync_playwright
 from transformers import BertForSequenceClassification, BertTokenizer
 
 from models import Blacklist, Company, URLLog, db
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 
-# 98f6ad5b9495d9d242511b0e65697af558b0e75685386896f8a2ed6ccca381e5
+# bee83abd47e50fd8db6ce597145253ed51460c9527c7bfbf8b80046bd521d7ec
 
 # App initialization
 app = Flask(__name__)
@@ -39,8 +39,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///phishing_logs.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False  # (optional, but good practice)
 
 # Import models app
-
-
 db.init_app(app)
 
 # Ensure tables are created inside app context
@@ -317,25 +315,17 @@ def home():
 # Predict Route
 @app.route("/predict", methods=["POST"])
 def predict():
-    data = request.get_json()
-    url = data.get("url")
+    company = get_company_from_request()
+    url = request.json.get("url")
     if not url:
         return jsonify({"error": "No URL provided"}), 400
 
-    # Get caller’s IP
-    client_ip = request.remote_addr
-
-    # Find company by IP
-    company = Company.query.filter(Company.registered_ips.contains(client_ip)).first()
-    if not company:
-        return jsonify({"error": "Unregistered network"}), 403
-
     try:
         bert_score = get_bert_prediction(url)
-
         features = extract_all_features(url)
-        features_df = pd.DataFrame([features])
-        features_df = features_df.reindex(columns=feature_names, fill_value=0)
+        features_df = pd.DataFrame([features]).reindex(
+            columns=feature_names, fill_value=0
+        )
         xgb_score = xgb_model.predict(xgb.DMatrix(features_df))[0]
 
         final_score = (0.6 * bert_score) + (0.4 * xgb_score)
@@ -377,18 +367,20 @@ def get_company_from_request():
 # Black List Routes
 @app.route("/blacklist/add", methods=["POST"])
 def add_to_blacklist():
+    # Authenticate company with API key (same as /predict)
+    api_key = request.headers.get("X-API-KEY")
+    if not api_key:
+        return jsonify({"error": "Missing API key"}), 401
+
+    company = Company.query.filter_by(api_key=api_key).first()
+    if not company:
+        return jsonify({"error": "Invalid API key"}), 403
+
     url = request.json.get("url")
     reason = request.json.get("reason", "manual")
 
     if not url:
         return jsonify({"error": "URL is required"}), 400
-
-    # Identify company based on client IP
-    client_ip = request.remote_addr
-    company = Company.query.filter(Company.registered_ips.contains(client_ip)).first()
-
-    if not company:
-        return jsonify({"error": "Unregistered network"}), 403
 
     # Check if already blacklisted for this company
     existing = Blacklist.query.filter_by(company_id=company.id, url=url).first()
@@ -407,27 +399,26 @@ def add_to_blacklist():
 def create_company():
     data = request.get_json()
     company_name = data.get("name")
-    password = data.get("password")
 
-    if not company_name or not password:
-        return jsonify({"error": "Company name and password are required"}), 400
+    if not company_name:
+        return jsonify({"error": "Company name is required"}), 400
 
     # Check if the company already exists
     existing = Company.query.filter_by(name=company_name).first()
     if existing:
         return jsonify({"error": "Company already exists"}), 400
 
-    # Hash the password
-    password_hash = generate_password_hash(password)
+    # Generate API key (used both for login + DNS filter auth)
+    api_key = secrets.token_hex(32)
 
-    new_company = Company(name=company_name, password_hash=password_hash)
+    new_company = Company(name=company_name, api_key=api_key)
     db.session.add(new_company)
     db.session.commit()
 
     return jsonify(
         {
             "message": "Company created successfully",
-            "company": {"name": company_name},
+            "company": {"name": company_name, "api_key": api_key},
         }
     ), 201
 

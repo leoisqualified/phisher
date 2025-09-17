@@ -1,4 +1,4 @@
-import requests 
+import requests
 import logging
 from dnslib import DNSRecord, QTYPE, RR, A, server
 
